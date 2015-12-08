@@ -1,0 +1,37 @@
+Toad/trunk/README.mbma
+
+Toad: Trainer Of All Data, the Frog training collection
+
+Antal van den Bosch Ko van der Sloot. March 21 2012
+ILK Research Group, Tilburg University
+
+Describes the steps to create a Timbl tree for the MBMA module in Frog
+anew, from the ground up.
+
+Assumes the presence of /corpora/FrogData/mbma-merged.lex, the lexicon
+based on CELEX (not e-Lex: it is not the same, or does not agree
+necessarily with what is in mblem.lex, the lexicon on which the
+lemmatizer MBLEM is trained on).
+
+The lexicon contains lines with <word> <morphological-analysis>, where
+the analysis is a space-delimited list of analysis codes that map
+one-to-one to the letters of the word: 
+
+aanblazend P 0 0 V 0 0 0+Ras>z pt 0 0
+aanblazende P 0 0 V 0 0 0+Ras>z pt 0 0 E
+aanblazing P 0 0 V 0 0 0+Ras>z N_V* 0 0/e
+aanbleef P 0 0 V 0 0+Rij>ee 0 0/ve
+aanbleven P 0 0 V 0 0+Rij>e 0+Rf>v vm 0
+
+The steps:
+
+1. Create instances from the merged lexicon. These are 6-1-6 letter
+   windows, comma separated, each labeled with the class associated
+   with the middle letter.
+
+   > makembma -i mbma-merged.lex -o mbma.data
+
+2. Create the Timbl tree, of the IGTree variety.
+
+   > timbl -a1 -w2 -f mbma.data -I mbma.igtree
+

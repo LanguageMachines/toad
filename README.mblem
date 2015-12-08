@@ -1,0 +1,57 @@
+Toad/trunk/README.mblem
+
+Toad: Trainer Of All Data, the Frog training collection
+
+Antal van den Bosch / Ko van der Sloot. March 21 2012
+ILK Research Group, Tilburg University
+
+Describes the steps to create a Timbl tree for the MBLEM module in Frog.
+
+Assumes the presence of /corpora/FrogData/mblem.lex , the lexicon
+based on e-Lex (a lexicon created on the basis of CELEX, and augmented
+to cover the CGN corpus). This lexicon has been adapted several
+times. The log of those adaptations can be found in
+/corpora/FrogData/mblem.lex.patch-history , originally kept as
+antalb@chronos:/exp/antalb/cgntaggerlematizer/tst_mblem/00LOGFILE
+. The latter directory contains original versions of the code written
+for the memory-based lemmatizers of the CGN and D-CoI projects.
+
+The lexicon contains lines with <word> <lemma> <cgn-tag> triples, like
+this:
+
+dakdekken dakdekken WW(inf,nom,zonder,zonder-n)
+dakdekken dakdekken WW(inf,vrij,zonder)
+dakdekker dakdekker N(soort,ev,basis,zijd,stan)
+dakdekkers dakdekker N(soort,mv,basis)
+dakdragers dakdrager N(soort,mv,basis)
+daken dak N(soort,mv,basis)
+
+it is very important that the .lex file is sorted in a decent fashion.
+LC_ALL="POSIX" will be fine. Do not use LC_ALL="C".
+
+for example:
+tegen tegen BW()
+tegen tegen N(soort,ev,basis,onz,stan)
+tegen tegen N(soort,ev,basis,zijd,stan)
+Tegen Tegen SPEC(deeleigen)
+tegen tegen VZ(fin)
+tegen tegen VZ(init)
+Tegen tegen VZ(init
+
+would be BAD, because lower and uppercase 'tegen' are interleaved.
+
+
+The steps:
+
+1. Create instances from the lexicon.
+
+   > makemblem -i mblem.lex -o mblem.data
+
+   This program creates 'mblem.data' from 'mblem.lex'
+
+   All parameters can be omitted. 'mblem.lex', 'mblem.data'
+   the option -t 'mblem.transtable' is discouraged!
+
+2. Create the Timbl tree, of the IGTree variety.
+
+   > timbl -a1 -w2 -f mblem.data -I mblem.tree

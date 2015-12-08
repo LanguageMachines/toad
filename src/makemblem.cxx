@@ -1,0 +1,265 @@
+/* make_lemmatizer_instances - from cgn_wordforms_with_lemmas_postags,
+   build an instance base of lemmatizer instances, for the CGN
+   memory-based lemmatizer MBLEM */
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <cstdlib>
+#include <unistd.h>
+#include "unicode/ustream.h"
+#include "unicode/unistr.h"
+
+#define HISTORY    20
+#define DEBUG       0
+
+using namespace std;
+
+UnicodeString UTF8ToUnicode( const string& s ){
+  return UnicodeString::fromUTF8( s );
+}
+
+string UnicodeToUTF8( const UnicodeString& s ){
+  string result;
+  s.toUTF8String(result);
+  return result;
+}
+
+size_t split( const string& src, vector<string>& results,
+	      const string& seps ){
+  // split a string into substrings, using the characters in seps
+  // as seperators
+  // silently skip empty entries (e.g. when two or more seperators co-incide)
+  results.clear();
+  string::size_type e, s = src.find_first_not_of( seps );
+  string res;
+  while ( s != string::npos ){
+    e = src.find_first_of( seps, s );
+    if ( e == string::npos ){
+      res = src.substr( s );
+      s = e;
+    }
+    else {
+      res = src.substr( s, e - s );
+      s = src.find_first_not_of( seps, e );
+    }
+    if ( !res.empty() )
+      results.push_back( res );
+  }
+  return results.size();
+}
+
+void usage(){
+  cerr << "makemblem [-i inputfile] [-o outputfile] [-t translationsfile]"
+       << endl;
+  cerr << "defaults: -i mblem.lex -o mblem.data" << endl;
+  cerr << "omitting -t makes us skip the translations step" << endl;
+}
+
+int main( int argc, char * const argv[] ) {
+  string inpname = "mblem.lex";
+  string transname;
+  string outname = "mblem.data";
+  int opt;
+  while ( (opt = getopt( argc, argv, "o:i:t:")) != -1 ){
+    switch ( opt ){
+    case 'i': inpname = optarg; break;
+    case 'o': outname = optarg; break;
+    case 't': transname = optarg; break;
+    default: usage(); return EXIT_FAILURE;
+    }
+  }
+
+  if ( inpname == outname ){
+    cerr << "input file and outputfile cannot have the same name!" << endl;
+    return EXIT_FAILURE;
+  }
+
+  bool doTrans = !transname.empty();
+
+  ifstream tf;
+  if ( doTrans ) {
+    tf.open( transname.c_str() );
+    if ( !tf ){
+      cerr << "could not open translations file '" << transname << "'" << endl;
+      return EXIT_FAILURE;
+    }
+  }
+  ifstream bron( inpname.c_str() );
+  if ( !bron ){
+    cerr << "could not open input file '" << inpname << "'" << endl;
+    return EXIT_FAILURE;
+  }
+  ostream *os;
+  if ( outname.empty() )
+    os = &cout;
+  else {
+    os = new ofstream( outname.c_str() );
+    if ( !os ){
+      cerr << "could not open output file '" << outname << "'" << endl;
+      return EXIT_FAILURE;
+    }
+  }
+  cerr << "creating " << outname << " from " << inpname;
+  if ( doTrans ){
+    cerr << " using translations from " << transname << endl;
+  }
+  else {
+    cerr << " without tag translations " << endl;
+  }
+  vector<UnicodeString> classes;
+  vector<UnicodeString> classcodes;
+  UnicodeString wordform;
+  UnicodeString lemma;
+  UnicodeString readpos;
+
+  string line;
+  if ( doTrans ){
+    vector<string> parts;
+    while ( getline( tf, line ) ){
+      int num = split( line, parts, " \t" );
+      if ( num == 2 ){
+	classes.push_back( UTF8ToUnicode( parts[0] ) );
+	classcodes.push_back( UTF8ToUnicode( parts[1] ) );
+      }
+      else {
+	cerr << "split failed " << num << " parts in " << line << endl;
+	exit(1);
+      }
+    }
+  }
+
+  UnicodeString lastinstance;
+  UnicodeString outLine;
+
+  while ( getline(bron, line ) ){
+    vector<string>parts;
+    int num = split( line, parts, " " );
+    if ( num == 3 ){
+      wordform = UTF8ToUnicode( parts[0] );
+      lemma = UTF8ToUnicode( parts[1] );
+      readpos = UTF8ToUnicode( parts[2] );
+    }
+    else {
+      cerr << "couldn't split in 3 " << line << endl;
+    }
+    bool debug = DEBUG; // || (wordform == "tegemoetgekomen");
+    //      = (wordform == "aangeslagen");
+
+    UnicodeString memwordform = wordform;
+    UnicodeString prefixed;
+    /* find out whether there may be a prefix or infix */
+    if ( readpos.indexOf("WW(vd") >= 0 ){
+      int gepos = wordform.indexOf("ge");
+      int bepos = wordform.indexOf("be");
+      if ( gepos != -1 ||
+	   bepos != -1 ) {
+	if ( debug)
+	  cerr << "alert - " << wordform << " " << lemma << endl;
+	UnicodeString edit = wordform;
+	//
+	// A bit tricky here
+	// We remove the first 'ge' OR the first 'be'
+	// the last would be better (e.g 'tegemoetgekomen' )
+	// but then frogs mblem module needs modification too
+	// need more thinking. Are there counterexamples?
+	if ( gepos != string::npos && gepos <  wordform.length()-5 ){
+	  prefixed = "ge";
+	  edit.remove( gepos, 2 );
+	}
+	else if ( bepos != string::npos && bepos <  wordform.length()-5 ){
+	  prefixed = "be";
+	  edit.remove( bepos, 2 );
+	}
+	if ( debug)
+	  cerr << " simplified from " << wordform << " to " << edit << endl;
+	size_t ident=0;
+	while ( ( ident< edit.length() )&&
+		( ident< lemma.length() ) &&
+		( edit[ident]==lemma[ident] ) )
+	  ident++;
+	if (ident<5) {
+	  // so we want at least 5 characters in common between lemma and our
+	  // edit. Otherwise discard.
+	  if (debug)
+	    cerr << " must be a fake!" << endl;
+	  prefixed = "";
+	}
+	else {
+	  wordform = edit;
+	}
+      }
+    }
+    if ( debug )
+      cerr << " continue with " << wordform << endl;
+    UnicodeString deleted;
+    UnicodeString inserted;
+    size_t ident=0;
+    while ( ident < wordform.length() &&
+	    ident < lemma.length() &&
+	    wordform[ident]==lemma[ident] )
+      ident++;
+    if ( ident < wordform.length() ) {
+      for ( int i=ident; i< wordform.length(); i++) {
+	deleted += wordform[i];
+      }
+    }
+    if ( ident< lemma.length() ) {
+      for ( int i=ident; i< lemma.length(); i++) {
+	inserted += lemma[i];
+      }
+    }
+    if ( debug ){
+      cerr << " word " << wordform << ", lemma " << lemma
+	   << ", prefix " << prefixed
+	   << ", insert " << inserted
+	   << ", delete " << deleted << endl;
+    }
+    UnicodeString instance;
+    // print instance
+    for ( int i=0; i<HISTORY; i++) {
+      int j= memwordform.length()-HISTORY+i;
+      if (j<0)
+	instance += "= ";
+      else {
+	UChar uc = memwordform[j];
+	instance += uc;
+	instance += " ";
+      }
+    }
+    if ( instance != lastinstance ){
+      if ( !outLine.isEmpty() )
+	*os << UnicodeToUTF8(outLine) << endl;
+      outLine.remove();
+      outLine += instance;
+      lastinstance = instance;
+    }
+    else {
+      outLine += "|";
+    }
+    if ( doTrans ){
+      size_t j = 0;
+      while ( j < classes.size() && ( readpos != classes[j] ) )
+	j++;
+      if ( j< classes.size() ){
+	outLine += UnicodeString( classcodes[j] );
+      }
+      else {
+	outLine += "?";
+	cerr << "UNKNOWN TAG: " << readpos << endl;
+      }
+    }
+    else {
+      outLine += readpos;
+    }
+    if ( !prefixed.isEmpty() )
+      outLine += "+P" + prefixed;
+    if ( !deleted.isEmpty() )
+      outLine += "+D" + deleted;
+    if ( !inserted.isEmpty() )
+      outLine += "+I" + inserted;
+  }
+  if ( !outLine.isEmpty() )
+    *os << UnicodeToUTF8(outLine) << endl;
+}
