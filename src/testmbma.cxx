@@ -1,7 +1,4 @@
 /*
-  $Id: mbma_prog.cxx 18699 2015-10-06 12:27:09Z sloot $
-  $URL: https://ilk.uvt.nl/svn/sources/Frog/trunk/src/mbma_prog.cxx $
-
   Copyright (c) 2006 - 2015
   Tilburg University
   Radboud University
@@ -41,6 +38,7 @@
 #include "ticcutils/LogStream.h"
 #include "ticcutils/Configuration.h"
 #include "ticcutils/CommandLine.h"
+#include "ticcutils/PrettyPrint.h"
 #include "ucto/unicode.h"
 #include "ticcutils/LogStream.h"
 #include "libfolia/document.h"
