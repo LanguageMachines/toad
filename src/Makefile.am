@@ -2,7 +2,7 @@
 # $URL: https://ticc.uvt.nl/svn/sources/Toad/branches/ToadNT/src/Makefile.am $
 
 AM_CPPFLAGS = -I@top_srcdir@/include
-AM_CXXFLAGS = -DSYSCONF_PATH=\"$(SYSCONFDIR)\" -std=c++11
+AM_CXXFLAGS = -DSYSCONF_PATH=\"$(SYSCONFDIR)\" -std=c++0x
 
 bin_PROGRAMS = makemblem makembma checkmbma checkmblem testmbma
 
