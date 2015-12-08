@@ -39,4 +39,4 @@ install:
     - make
     - sudo make install
 script:
-    - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib && make check
+    - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib  && make check
