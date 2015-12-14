@@ -20,6 +20,7 @@
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
 #include "timbl/TimblAPI.h"
+#include "mbt/MbtAPI.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
 
@@ -58,15 +59,17 @@ void fill_lemmas( istream& is,
       exit( EXIT_FAILURE );
     }
     vector<UnicodeString> uparts(3);
-    uparts[0] = UnicodeFromS( parts[0], enc );
-    uparts[1] = UnicodeFromS( parts[1], enc );
-    uparts[2] = UnicodeFromS( parts[2], enc );
+    uparts[0] = UnicodeFromS( parts[0], enc ); // the word
+    uparts[1] = UnicodeFromS( parts[1], enc ); // the lemma
+    uparts[2] = UnicodeFromS( parts[2], enc ); // the POS tag
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
+      // so a completely new word
       it = lems.insert( make_pair( uparts[0], multimap<UnicodeString,UnicodeString>() ) );
       it->second.insert( make_pair(uparts[1], uparts[2]) );
     }
     else {
+      // word seen before. But with this lemma?
       auto it2 = it->second.lower_bound( uparts[1] );
       if ( it2 == it->second.upper_bound( uparts[1] ) ){
 	// so this lemma not yet done for this word
@@ -75,13 +78,14 @@ void fill_lemmas( istream& is,
       else {
 	bool done = false;
 	for ( ;!done && (it2 != it->second.upper_bound( uparts[1] )); ++it2 ){
-	  // look if this tageis done for this word/lemma combi
+	  // look if this tag is seen before for this word/lemma combi
 	  if ( it2->second == uparts[2] ){
 	    // YES
 	    done = true;
 	  }
 	}
 	if ( !done ){
+	  // new word/lemma combi. Add it with this tag
 	  it->second.insert( make_pair( uparts[1],uparts[2]) );
 	}
       }
@@ -89,31 +93,20 @@ void fill_lemmas( istream& is,
   }
 }
 
-void fill_corpus( istream& is,
-		  multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& lems,
-		  const string& enc ){
-  string line;
-  while ( getline( is, line ) ){
-    vector<string> parts;
-    size_t num = TiCC::split( line, parts );
-    if ( num != 3 ){
-      cerr << "wrong inputline (should be 3 parts)" << endl;
-      cerr << "'" << line << "'" << endl;
-      exit( EXIT_FAILURE );
-    }
-    vector<UnicodeString> uparts(3);
-    uparts[0] = UnicodeFromS( parts[0], enc );
-    uparts[1] = UnicodeFromS( parts[1], enc );
-    uparts[2] = UnicodeFromS( parts[2], enc );
-    auto it = lems.find( uparts[0] );
-    if ( it == lems.end() ){
-      it = lems.insert( make_pair( uparts[0], multimap<UnicodeString,UnicodeString>() ) );
-
-    }
-    it->second.insert( make_pair(uparts[1], uparts[2]) );
+UnicodeString lemma_lookup( multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& data, const UnicodeString& word, const UnicodeString& tag ){
+  auto it = data.lower_bound( word );
+  if ( it == data.upper_bound( word ) ){
+    // word not found
+    return "";
   }
+  for ( ; it != data.upper_bound( word ); ++it ){
+    for ( auto it2 = it->second.begin(); it2 != it->second.end(); ++it2 ){
+      if ( it2->second == tag )
+	return it2->first;
+    }
+  }
+  return "";
 }
-
 
 void create_mblem_trainfile( multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& data, const string& filename ){
   ofstream os( filename );
@@ -187,7 +180,7 @@ void create_mblem_trainfile( multimap<UnicodeString, multimap<UnicodeString, Uni
   }
   if ( !outLine.isEmpty() )
     os << UnicodeToUTF8(outLine) << endl;
-  cout << "created a mblm trainingsfile: " << filename << endl;
+  cout << "created a mblem trainingsfile: " << filename << endl;
 }
 
 void train_mblem( const string& inputfile, const string& outputfile ){
@@ -215,6 +208,10 @@ int main( int argc, char * const argv[] ) {
   }
   opts.extract( 'l', lemmaname );
   opts.extract( 'O', outputdir );
+  if ( !outputdir.empty() ){
+    if ( outputdir[outputdir.length()-1] != '/' )
+      outputdir += "/";
+  }
   opts.extract( 'e', encoding );
 
   multimap<UnicodeString,multimap<UnicodeString,UnicodeString>> data;
@@ -224,8 +221,11 @@ int main( int argc, char * const argv[] ) {
     cerr << "could not open corpus file '" << corpusname << "'" << endl;
     return EXIT_FAILURE;
   }
+  //#define CONVERT
+#ifndef CONVERT
   cout << "start reading lemmas from: " << corpusname << endl;
   fill_lemmas( corpus, data, encoding );
+#endif
   if ( !lemmaname.empty() ){
     cout << "start reading extra lemmas from: " << lemmaname << endl;
     ifstream is( lemmaname);
@@ -235,6 +235,57 @@ int main( int argc, char * const argv[] ) {
     }
     fill_lemmas( is, data, encoding );
   }
+#ifdef CONVERT
+  ofstream os( "corpus.frog" );
+  string line;
+  while ( getline( corpus, line ) ){
+    if ( line == "<utt>" ){
+      os << line << endl;
+    }
+    else {
+      vector<string> parts;
+      size_t num = TiCC::split( line, parts );
+      if ( num == 2 ){
+	UnicodeString word = UnicodeFromS( parts[0] );
+	UnicodeString tag = UnicodeFromS( parts[1] );
+	UnicodeString lemma = lemma_lookup( data, word, tag );
+	if ( lemma.length() != 0 ){
+	  os << parts[0] << "\t" << UnicodeToUTF8(lemma)
+	     << "\t" << parts[1] << endl;
+	}
+	else {
+	  os << parts[0] << "\t" << parts[0] << "\t" << parts[1] << endl;
+	}
+      }
+    }
+  }
+#else
+  ofstream os( "mbt.tagged" );
+  string line;
+  corpus.clear();
+  corpus.seekg(0);
+  while ( getline( corpus, line ) ){
+    if ( line == "<utt>" ){
+      os << line << endl;
+    }
+    else {
+      vector<string> parts;
+      size_t num = TiCC::split( line, parts );
+      if ( num == 3 ){
+	os << parts[0] << "\t" << parts[2] << endl;
+      }
+      else {
+	cerr << "invalid input line: " << line << endl;
+	exit( EXIT_FAILURE );
+      }
+    }
+  }
+  cout << "created an inputfile for the tagger: mbt.tagged" << endl;
+  string taggercommand = "-T mbt.tagged -s " + outputdir + "mbt.settings";
+  cout << "start tagger: " << taggercommand << endl;
+  MbtAPI::GenerateTagger( taggercommand );
+  cout << "finished tagger" << endl;
+#endif
   // for( const auto& it : data ){
   //   for ( const auto& it2 : it.second ){
   //     cout << it.first << " " << it2.first << " " << it2.second << endl;
