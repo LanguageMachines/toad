@@ -16,9 +16,11 @@
 #include <fstream>
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
+#include "ticcutils/FileUtils.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
 #include "unicode/ustream.h"
@@ -45,7 +47,7 @@ void usage(){
 }
 
 void fill_lemmas( istream& is,
-		  multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& lems,
+		  multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& lems,
 		  const string& enc ){
   string line;
   while ( getline( is, line ) ){
@@ -65,35 +67,24 @@ void fill_lemmas( istream& is,
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
       // so a completely new word
-      it = lems.insert( make_pair( uparts[0], multimap<UnicodeString,UnicodeString>() ) );
-      it->second.insert( make_pair(uparts[1], uparts[2]) );
+      it = lems.insert( make_pair( uparts[0], map<UnicodeString,set<UnicodeString>>() ) );
+      it->second[uparts[1]].insert( uparts[2] );
     }
     else {
       // word seen before. But with this lemma?
-      auto it2 = it->second.lower_bound( uparts[1] );
-      if ( it2 == it->second.upper_bound( uparts[1] ) ){
+      auto it2 = it->second.find( uparts[1] );
+      if ( it2 == it->second.end() ){
 	// so this lemma not yet done for this word
-	it2 = it->second.insert( make_pair( uparts[1],uparts[2]) );
+	it->second[uparts[1]].insert( uparts[2] );
       }
       else {
-	bool done = false;
-	for ( ;!done && (it2 != it->second.upper_bound( uparts[1] )); ++it2 ){
-	  // look if this tag is seen before for this word/lemma combi
-	  if ( it2->second == uparts[2] ){
-	    // YES
-	    done = true;
-	  }
-	}
-	if ( !done ){
-	  // new word/lemma combi. Add it with this tag
-	  it->second.insert( make_pair( uparts[1],uparts[2]) );
-	}
+	it2->second.insert( uparts[2] );
       }
     }
   }
 }
 
-UnicodeString lemma_lookup( multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& data, const UnicodeString& word, const UnicodeString& tag ){
+UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data, const UnicodeString& word, const UnicodeString& tag ){
   auto it = data.lower_bound( word );
   if ( it == data.upper_bound( word ) ){
     // word not found
@@ -101,35 +92,38 @@ UnicodeString lemma_lookup( multimap<UnicodeString, multimap<UnicodeString, Unic
   }
   for ( ; it != data.upper_bound( word ); ++it ){
     for ( auto it2 = it->second.begin(); it2 != it->second.end(); ++it2 ){
-      if ( it2->second == tag )
+      if ( it2->second.find(tag) != it2->second.end() ){
+	// is it in the tagset?
 	return it2->first;
+      }
     }
   }
   return "";
 }
 
-void create_mblem_trainfile( multimap<UnicodeString, multimap<UnicodeString, UnicodeString>>& data, const string& filename ){
+void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data, const string& filename ){
   ofstream os( filename );
   if ( !os ){
     cerr << "couldn't create mblem datafile" << filename << endl;
     exit( EXIT_FAILURE );
   }
-  UnicodeString lastinstance;
   UnicodeString outLine;
   for ( const auto& it : data ){
+    UnicodeString wordform = it.first;
+    UnicodeString safeInstance;
     if ( !outLine.isEmpty() ){
-      os << UnicodeToUTF8(outLine) << endl;
+      string out = UnicodeToUTF8(outLine);
+      out.erase( out.length()-1 );
+      os << out << endl;
       outLine.remove();
     }
-    UnicodeString wordform = it.first;
     for ( const auto& it2 : it.second ){
       UnicodeString lemma  = it2.first;
-      UnicodeString tag = it2.second;
       UnicodeString memwordform = wordform;
       UnicodeString prefixed;
       UnicodeString deleted;
       UnicodeString inserted;
-      size_t ident=0;
+      int ident=0;
       while ( ident < wordform.length() &&
 	      ident < lemma.length() &&
 	      wordform[ident]==lemma[ident] )
@@ -151,7 +145,7 @@ void create_mblem_trainfile( multimap<UnicodeString, multimap<UnicodeString, Uni
 	     << ", delete " << deleted << endl;
       }
       UnicodeString instance;
-      // print instance
+      // format instance
       for ( int i=0; i<HISTORY; i++) {
 	int j= memwordform.length()-HISTORY+i;
 	if (j<0)
@@ -162,24 +156,31 @@ void create_mblem_trainfile( multimap<UnicodeString, multimap<UnicodeString, Uni
 	  instance += " ";
 	}
       }
-      if ( instance != lastinstance ){
-	outLine += instance;
-	lastinstance = instance;
+      if ( safeInstance.isEmpty() ){
+	// first time around
+	safeInstance = instance;
+	outLine = instance;
       }
-      else {
+      else if ( instance != safeInstance ){
+	// instance changed. Spit out what we have...
+	string out = UnicodeToUTF8(outLine);
+	out.erase( out.length()-1 );
+	os << out << endl;
+	safeInstance = instance;
+	outLine = instance;
+      }
+      for ( auto const& tag : it2.second ){
+	outLine += tag;
+	if ( !prefixed.isEmpty() )
+	  outLine += "+P" + prefixed;
+	if ( !deleted.isEmpty() )
+	  outLine += "+D" + deleted;
+	if ( !inserted.isEmpty() )
+	  outLine += "+I" + inserted;
 	outLine += "|";
       }
-      outLine += tag;
-      if ( !prefixed.isEmpty() )
-	outLine += "+P" + prefixed;
-      if ( !deleted.isEmpty() )
-	outLine += "+D" + deleted;
-      if ( !inserted.isEmpty() )
-	outLine += "+I" + inserted;
     }
   }
-  if ( !outLine.isEmpty() )
-    os << UnicodeToUTF8(outLine) << endl;
   cout << "created a mblem trainingsfile: " << filename << endl;
 }
 
@@ -211,10 +212,14 @@ int main( int argc, char * const argv[] ) {
   if ( !outputdir.empty() ){
     if ( outputdir[outputdir.length()-1] != '/' )
       outputdir += "/";
+    if ( !isDir( outputdir ) && !createPath( outputdir ) ){
+      cerr << "output dir not usable: " << outputdir << endl;
+      exit(EXIT_FAILURE);
+    }
   }
   opts.extract( 'e', encoding );
 
-  multimap<UnicodeString,multimap<UnicodeString,UnicodeString>> data;
+  multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>> data;
 
   ifstream corpus( corpusname);
   if ( !corpus ){
@@ -281,7 +286,10 @@ int main( int argc, char * const argv[] ) {
     }
   }
   cout << "created an inputfile for the tagger: mbt.tagged" << endl;
-  string taggercommand = "-T mbt.tagged -s " + outputdir + "mbt.settings";
+  string taggercommand = "-T mbt.tagged -s " + outputdir + "mbt.settings"
+    + " -p dddwfWawa -P chnppdddwFawasss"
+    + " -O\"+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL\""
+    + " -M500";
   cout << "start tagger: " << taggercommand << endl;
   MbtAPI::GenerateTagger( taggercommand );
   cout << "finished tagger" << endl;
