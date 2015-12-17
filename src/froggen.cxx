@@ -117,67 +117,113 @@ void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<Unic
       os << out << endl;
       outLine.remove();
     }
+    UnicodeString instance;
+    // format instance
+    for ( int i=0; i<HISTORY; i++) {
+      int j= wordform.length()-HISTORY+i;
+      if (j<0)
+	instance += "= ";
+      else {
+	UChar uc = wordform[j];
+	instance += uc;
+	instance += " ";
+      }
+    }
+    if ( safeInstance.isEmpty() ){
+      // first time around
+      if ( debug ){
+	cerr << "NEW instance " << instance << endl;
+      }
+      safeInstance = instance;
+      outLine = instance;
+    }
+    else if ( instance != safeInstance ){
+      // instance changed. Spit out what we have...
+      if ( debug ){
+	cerr << "instance changed from: " << safeInstance << endl
+	     << "to " << instance << endl;
+      }
+      string out = UnicodeToUTF8(outLine);
+      out.erase( out.length()-1 );
+      os << out << endl;
+      safeInstance = instance;
+      outLine = instance;
+    }
     for ( const auto& it2 : it.second ){
       UnicodeString lemma  = it2.first;
-      UnicodeString memwordform = wordform;
-      UnicodeString prefixed;
-      UnicodeString deleted;
-      UnicodeString inserted;
-      int ident=0;
-      while ( ident < wordform.length() &&
-	      ident < lemma.length() &&
-	      wordform[ident]==lemma[ident] )
-	ident++;
-      if ( ident < wordform.length() ) {
-	for ( int i=ident; i< wordform.length(); i++) {
-	  deleted += wordform[i];
-	}
-      }
-      if ( ident< lemma.length() ) {
-	for ( int i=ident; i< lemma.length(); i++) {
-	  inserted += lemma[i];
-	}
-      }
-      if ( debug ){
-	cerr << " word " << wordform << ", lemma " << lemma
-	     << ", prefix " << prefixed
-	     << ", insert " << inserted
-	     << ", delete " << deleted << endl;
-      }
-      UnicodeString instance;
-      // format instance
-      for ( int i=0; i<HISTORY; i++) {
-	int j= memwordform.length()-HISTORY+i;
-	if (j<0)
-	  instance += "= ";
-	else {
-	  UChar uc = memwordform[j];
-	  instance += uc;
-	  instance += " ";
-	}
-      }
-      if ( safeInstance.isEmpty() ){
-	// first time around
-	if ( debug ){
-	  cerr << "NEW instance " << instance << endl;
-	}
-	safeInstance = instance;
-	outLine = instance;
-      }
-      else if ( instance != safeInstance ){
-	// instance changed. Spit out what we have...
-	if ( debug ){
-	  cerr << "instance changed from: " << safeInstance << endl
-	       << "to " << instance << endl;
-	}
-	string out = UnicodeToUTF8(outLine);
-	out.erase( out.length()-1 );
-	os << out << endl;
-	safeInstance = instance;
-	outLine = instance;
-      }
       for ( auto const& tag : it2.second ){
 	outLine += tag;
+	UnicodeString prefixed;
+	UnicodeString thisform = wordform;
+	/* find out whether there may be a prefix or infix */
+	if ( tag.indexOf("WW(vd") >= 0 ){
+	  int gepos = thisform.indexOf("ge");
+	  int bepos = thisform.indexOf("be");
+	  if ( gepos != -1 ||
+	       bepos != -1 ) {
+	    if ( debug)
+	      cerr << "alert - " << thisform << " " << lemma << endl;
+	    UnicodeString edit = thisform;
+	    //
+	    // A bit tricky here
+	    // We remove the first 'ge' OR the first 'be'
+	    // the last would be better (e.g 'tegemoetgekomen' )
+	    // but then frogs mblem module needs modification too
+	    // need more thinking. Are there counterexamples?
+	    if ( (size_t)gepos != string::npos && gepos < thisform.length()-5 ){
+	      prefixed = "ge";
+	      edit.remove( gepos, 2 );
+	    }
+	    else if ( (size_t)bepos != string::npos && bepos < thisform.length()-5 ){
+	      prefixed = "be";
+	      edit.remove( bepos, 2 );
+	    }
+	    if ( debug)
+	      cerr << " simplified from " << thisform << " to " << edit << endl;
+	    int ident=0;
+	    while ( ( ident< edit.length() )&&
+		    ( ident< lemma.length() ) &&
+		    ( edit[ident]==lemma[ident] ) )
+	      ident++;
+	    if (ident<5) {
+	      // so we want at least 5 characters in common between lemma and our
+	      // edit. Otherwise discard.
+	      if (debug)
+		cerr << " must be a fake!" << endl;
+	      prefixed = "";
+	    }
+	    else {
+	      thisform = edit;
+	      if ( debug ){
+		cerr << " edited wordform " << thisform << endl;
+	      }
+	    }
+	  }
+	}
+
+	UnicodeString deleted;
+	UnicodeString inserted;
+	int ident=0;
+	while ( ident < thisform.length() &&
+		ident < lemma.length() &&
+		thisform[ident]==lemma[ident] )
+	  ident++;
+	if ( ident < thisform.length() ) {
+	  for ( int i=ident; i< thisform.length(); i++) {
+	    deleted += thisform[i];
+	  }
+	}
+	if ( ident< lemma.length() ) {
+	  for ( int i=ident; i< lemma.length(); i++) {
+	    inserted += lemma[i];
+	  }
+	}
+	if ( debug ){
+	  cerr << " word " << thisform << ", lemma " << lemma
+	       << ", prefix " << prefixed
+	       << ", insert " << inserted
+	       << ", delete " << deleted << endl;
+	}
 	if ( !prefixed.isEmpty() )
 	  outLine += "+P" + prefixed;
 	if ( !deleted.isEmpty() )
