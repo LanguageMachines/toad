@@ -12,7 +12,7 @@
 #include "unicode/unistr.h"
 
 #define HISTORY    20
-#define DEBUG       1
+#define DEBUG       0
 
 using namespace std;
 
