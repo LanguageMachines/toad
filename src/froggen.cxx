@@ -29,7 +29,7 @@
 using namespace std;
 
 int debug = 0;
-#define HISTORY    20
+const int HISTORY = 20;
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -158,11 +158,18 @@ void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<Unic
       }
       if ( safeInstance.isEmpty() ){
 	// first time around
+	if ( debug ){
+	  cerr << "NEW instance " << instance << endl;
+	}
 	safeInstance = instance;
 	outLine = instance;
       }
       else if ( instance != safeInstance ){
 	// instance changed. Spit out what we have...
+	if ( debug ){
+	  cerr << "instance changed from: " << safeInstance << endl
+	       << "to " << instance << endl;
+	}
 	string out = UnicodeToUTF8(outLine);
 	out.erase( out.length()-1 );
 	os << out << endl;
@@ -180,6 +187,12 @@ void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<Unic
 	outLine += "|";
       }
     }
+  }
+  if ( !outLine.isEmpty() ){
+    string out = UnicodeToUTF8(outLine);
+    out.erase( out.length()-1 );
+    os << out << endl;
+    outLine.remove();
   }
   cout << "created a mblem trainingsfile: " << filename << endl;
 }
