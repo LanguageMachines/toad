@@ -21,15 +21,19 @@
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
+#include "ticcutils/Configuration.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
+#include "config.h"
 
 using namespace std;
 
 int debug = 0;
 const int HISTORY = 20;
+
+static Configuration config;
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -260,7 +264,11 @@ void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<Unic
 }
 
 void train_mblem( const string& inputfile, const string& outputfile ){
-  string timblopts = "-a1 -w2 +vS";
+  string timblopts;
+  timblopts = config.lookUp( "timblOpts", "mblem" );
+  if ( timblopts.empty() ){
+    timblopts = "-a1 -w2 +vS";
+  }
   cout << "Timbl: Start training " << inputfile << " with Options: "
        << timblopts << endl;
   Timbl::TimblAPI timbl( timblopts );
@@ -270,17 +278,34 @@ void train_mblem( const string& inputfile, const string& outputfile ){
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("T:l:e:O:","");
+  TiCC::CL_Options opts("T:l:e:O:c:hV","");
   opts.parse_args( argc, argv );
 
   string corpusname;
   string outputdir;
   string lemmaname;
+  string configfile;
   string encoding = "UTF-8";
+
+  if ( opts.extract( 'h' ) ){
+    usage();
+    exit( EXIT_SUCCESS );
+  }
+
+  if ( opts.extract( 'V' ) ){
+    cerr << "VERSION: " << VERSION << endl;
+    exit( EXIT_SUCCESS );
+  }
 
   if ( !opts.extract( 'T', corpusname ) ){
     cerr << "Missing a corpus!, (-T option)" << endl;
     exit( EXIT_FAILURE );
+  }
+  if ( opts.extract( 'c', configfile ) ){
+    if ( !config.fill( configfile ) ) {
+      cerr << "unable to open:" << configfile << endl;
+      exit( EXIT_FAILURE );
+    }
   }
   opts.extract( 'l', lemmaname );
   opts.extract( 'O', outputdir );
@@ -340,7 +365,10 @@ int main( int argc, char * const argv[] ) {
     }
   }
 #else
-  ofstream os( "mbt.tagged" );
+  string baseName = config.lookUp( "baseName", "tagger" );
+  baseName = outputdir + baseName;
+  string tagDataName = baseName + ".data";
+  ofstream os( tagDataName );
   string line;
   corpus.clear();
   corpus.seekg(0);
@@ -360,11 +388,33 @@ int main( int argc, char * const argv[] ) {
       }
     }
   }
-  cout << "created an inputfile for the tagger: mbt.tagged" << endl;
-  string taggercommand = "-T mbt.tagged -s " + outputdir + "mbt.settings"
-    + " -p dddwfWawa -P chnppdddwFawasss"
-    + " -O\"+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL\""
-    + " -M500";
+  cout << "created an inputfile for the tagger: " << tagDataName << endl;
+  string p_pat = config.lookUp( "p", "tagger" );
+  if ( p_pat.empty() ){
+    p_pat = "dddwfWawa";
+  }
+  string P_pat = config.lookUp( "P", "tagger" );
+  if ( P_pat.empty() ){
+    P_pat = "chnppdddwFawasss";
+  }
+  string timblopts = config.lookUp( "timblOpts", "tagger" );
+  if ( timblopts.empty() ){
+    timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
+  }
+  string M_opt = config.lookUp( "M", "tagger" );
+  if ( M_opt.empty() ){
+    M_opt = "500";
+  }
+  string N_opt = config.lookUp( "N", "tagger" );
+  string taggercommand = "-T " + tagDataName
+    + " -s " + baseName + ".settings"
+    + " -p " + p_pat + " -P " + P_pat
+    + " -O\""+ timblopts + "\""
+    + " -M " + M_opts;
+  if ( !N_opt.empty() ){
+    taggercommand += " -N " + N_opt;
+  }
+
   cout << "start tagger: " << taggercommand << endl;
   MbtAPI::GenerateTagger( taggercommand );
   cout << "finished tagger" << endl;
@@ -374,15 +424,10 @@ int main( int argc, char * const argv[] ) {
   //     cout << it.first << " " << it2.first << " " << it2.second << endl;
   //   }
   // }
-  string mblemdatafilename = "mblem.data";
-  string mblemoutputfilename = "mblem.tree";
-  if ( !outputdir.empty() ){
-    if ( outputdir[outputdir.length()-1] != '/' )
-      outputdir += "/";
-    mblemdatafilename = outputdir + mblemdatafilename;
-    mblemoutputfilename = outputdir + mblemoutputfilename;
-  }
-  create_mblem_trainfile( data, mblemdatafilename );
-  train_mblem( mblemdatafilename, mblemoutputfilename );
+  string mblemtreefile = config.lookUp( "treeFile", "mblem" );
+  mblemtreefile = outputdir + mblemtreefile;
+  string mblemdatafile = mblemtreefile + ".data";
+  create_mblem_trainfile( data, mblemdatafile );
+  train_mblem( mblemdatafile, mblemtreefile );
   return EXIT_SUCCESS;
 }
