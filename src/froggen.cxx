@@ -410,7 +410,7 @@ int main( int argc, char * const argv[] ) {
     + " -s " + baseName + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
-    + " -M " + M_opts;
+    + " -M " + M_opt;
   if ( !N_opt.empty() ){
     taggercommand += " -N " + N_opt;
   }
