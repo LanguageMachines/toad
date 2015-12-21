@@ -101,6 +101,8 @@ UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<Unico
   return "";
 }
 
+const map<string,set<string>> particles = { {"WW(vd", {"be","ge"}} };
+
 void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data, const string& filename ){
   ofstream os( filename );
   if ( !os ){
@@ -155,48 +157,62 @@ void create_mblem_trainfile( multimap<UnicodeString, map<UnicodeString, set<Unic
 	outLine += tag;
 	UnicodeString prefixed;
 	UnicodeString thisform = wordform;
-	/* find out whether there may be a prefix or infix */
-	if ( tag.indexOf("WW(vd") >= 0 ){
-	  int gepos = thisform.indexOf("ge");
-	  int bepos = thisform.indexOf("be");
-	  if ( gepos != -1 ||
-	       bepos != -1 ) {
-	    if ( debug)
-	      cerr << "alert - " << thisform << " " << lemma << endl;
-	    UnicodeString edit = thisform;
-	    //
-	    // A bit tricky here
-	    // We remove the first 'ge' OR the first 'be'
-	    // the last would be better (e.g 'tegemoetgekomen' )
-	    // but then frogs mblem module needs modification too
-	    // need more thinking. Are there counterexamples?
-	    if ( (size_t)gepos != string::npos && gepos < thisform.length()-5 ){
-	      prefixed = "ge";
-	      edit.remove( gepos, 2 );
-	    }
-	    else if ( (size_t)bepos != string::npos && bepos < thisform.length()-5 ){
-	      prefixed = "be";
-	      edit.remove( bepos, 2 );
-	    }
-	    if ( debug)
-	      cerr << " simplified from " << thisform << " to " << edit << endl;
-	    int ident=0;
-	    while ( ( ident< edit.length() )&&
-		    ( ident< lemma.length() ) &&
-		    ( edit[ident]==lemma[ident] ) )
-	      ident++;
-	    if (ident<5) {
-	      // so we want at least 5 characters in common between lemma and our
-	      // edit. Otherwise discard.
-	      if (debug)
-		cerr << " must be a fake!" << endl;
-	      prefixed = "";
-	    }
-	    else {
-	      thisform = edit;
-	      if ( debug ){
-		cerr << " edited wordform " << thisform << endl;
+	//  find out whether there may be a prefix or infix particle
+	for( const auto it : particles ){
+	  if ( !prefixed.isEmpty() )
+	    break;
+	  thisform = wordform;
+	  if ( tag.indexOf(it.first.c_str()) >= 0 ){
+	    // the POS tag matches, so potentially yes
+	    int part_pos = -1;
+	    UnicodeString part;
+	    for ( const auto& p : it.second ){
+	      // loop over potential particles.
+	      part_pos = thisform.indexOf(p.c_str());
+	      if ( part_pos != -1 ){
+		part = p.c_str();
+		if ( debug ){
+		  cerr << "alert - " << thisform << " " << lemma << endl;
+		  cerr << "matched " << part << " position: " << part_pos << endl;
+		}
+		UnicodeString edit = thisform;
+		//
+		// A bit tricky here
+		// We remove the first particle
+		// the last would be better (e.g 'tegemoetgekomen' )
+		// but then frogs mblem module needs modification too
+		// need more thinking. Are there counterexamples?
+		if ( (size_t)part_pos != string::npos
+		     && part_pos < thisform.length()-5 ){
+		  prefixed = part;
+		  edit = edit.remove( part_pos, prefixed.length() );
+		  if ( debug ){
+		    cerr << " simplified from " << thisform
+			 << " to " << edit << " vergelijk: " << lemma << endl;
+		  }
+		  int ident=0;
+		  while ( ( ident < edit.length() ) &&
+			  ( ident < lemma.length() ) &&
+			  ( edit[ident]==lemma[ident] ) ){
+		    ident++;
+		  }
+		  if (ident<5) {
+		    // so we want at least 5 characters in common between lemma and our
+		    // edit. Otherwise discard.
+		    if ( debug )
+		      cerr << " must be a fake!" << endl;
+		    prefixed = "";
+		  }
+		  else {
+		    thisform = edit;
+		    if ( debug ){
+		      cerr << " edited wordform " << thisform << endl;
+		    }
+		  }
+		}
 	      }
+	      if ( !prefixed.isEmpty() )
+		break;
 	    }
 	  }
 	}
