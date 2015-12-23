@@ -2,14 +2,14 @@
   Copyright (c) CLST 2015-2016
   CLST  - Radboud University
 
-  Froggen: A Generator for Frog datafiles.
+  froggen: A Generator for Frog datafiles.
 
-  Centre for Language Studies, Radboud University Nijmegen
+  Froggen is part of the toad packake.
 
   Comments and bug-reports are welcome at our issue tracker at
-  https://github.com/LanguageMachines/timblserver/issues
+      https://github.com/LanguageMachines/toad/issues
   or by mailing
-  lamasoftware (at ) science.ru.nl
+      lamasoftware (at ) science.ru.nl
 */
 
 
@@ -34,6 +34,14 @@ using namespace TiCC;
 
 int debug = 0;
 const int HISTORY = 20;
+
+// some defaults (for Dutch)
+const string dutch_partics = "[WW(vd/be] [WW(vd/ge]";
+const string dutch_p_pat = "dddwfWawa";
+const string dutch_P_pat = "chnppdddwFawasss";
+const string dutch_timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
+const string dutch_M_opt = "500";
+const string dutch_lemma_timbl_opts = "-a1 -w2 +vS";
 
 static Configuration config;
 
@@ -131,19 +139,19 @@ void create_tagger( const string& base_name, const string& corpus_name ){
   cout << "created an inputfile for the tagger: " << tag_data_name << endl;
   string p_pat = config.lookUp( "p", "tagger" );
   if ( p_pat.empty() ){
-    p_pat = "dddwfWawa";
+    p_pat = dutch_p_pat;
   }
   string P_pat = config.lookUp( "P", "tagger" );
   if ( P_pat.empty() ){
-    P_pat = "chnppdddwFawasss";
+    P_pat = dutch_P_pat;
   }
   string timblopts = config.lookUp( "timblOpts", "tagger" );
   if ( timblopts.empty() ){
-    timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
+    timblopts = dutch_timblopts;
   }
   string M_opt = config.lookUp( "M", "tagger" );
   if ( M_opt.empty() ){
-    M_opt = "500";
+    M_opt = dutch_M_opt;
   }
   string N_opt = config.lookUp( "N", "tagger" );
   string taggercommand = "-T " + tag_data_name
@@ -154,13 +162,29 @@ void create_tagger( const string& base_name, const string& corpus_name ){
   if ( !N_opt.empty() ){
     taggercommand += " -N " + N_opt;
   }
-
+  taggercommand += " -DLogSilent"; // shut up
   cout << "start tagger: " << taggercommand << endl;
+  cout << "this may take several minutes, depending on the corpus size."
+       << endl;
   MbtAPI::GenerateTagger( taggercommand );
   cout << "finished tagger" << endl;
 }
 
-const map<string,set<string>> particles = { {"WW(vd", {"be","ge"}} };
+map<string,set<string>> particles;
+void fill_particles( const string& line ){
+  cout << "start filling particle info from " << line << endl;
+  vector<string> parts;
+  TiCC::split_at_first_of( line, parts, "[] " );
+  for ( const auto& part : parts ){
+    vector<string> v;
+    if ( 2 != TiCC::split_at( part, v, "/" ) ){
+      cerr << "error parsing particles line: " << line << endl;
+      cerr << "at : " << part << endl;
+      exit( EXIT_FAILURE );
+    }
+    particles[v[0]].insert( v[1] );
+  }
+}
 
 void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data,
 			     const string& filename ){
@@ -320,10 +344,9 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
 }
 
 void train_mblem( const string& inputfile, const string& outputfile ){
-  string timblopts;
-  timblopts = config.lookUp( "timblOpts", "mblem" );
+  string timblopts = config.lookUp( "timblOpts", "mblem" );
   if ( timblopts.empty() ){
-    timblopts = "-a1 -w2 +vS";
+    timblopts = dutch_lemma_timbl_opts;
   }
   cout << "Timbl: Start training " << inputfile << " with Options: "
        << timblopts << endl;
@@ -406,6 +429,12 @@ int main( int argc, char * const argv[] ) {
     }
   }
   opts.extract( 'e', encoding );
+  string mblem_particles = config.lookUp( "particles", "mblem" );
+  if ( !mblem_particles.empty() ){
+    fill_particles( mblem_particles );
+  }
+  else
+    fill_particles( dutch_partics );
 
   multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>> data;
 
