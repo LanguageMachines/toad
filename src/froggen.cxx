@@ -1,17 +1,28 @@
 /*
-  Copyright (c) CLST 2015-2016
-  CLST  - Radboud University
+  Copyright (c) 2015 - 2016
+  CLST Radboud University
 
-  froggen: A Generator for Frog datafiles.
+  This file is part of toad
 
-  Froggen is part of the toad packake.
+  toad is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
 
-  Comments and bug-reports are welcome at our issue tracker at
+  toad is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+  For questions and suggestions, see:
       https://github.com/LanguageMachines/toad/issues
-  or by mailing
+  or send mail to:
       lamasoftware (at ) science.ru.nl
 */
-
 
 #include <iostream>
 #include <fstream>

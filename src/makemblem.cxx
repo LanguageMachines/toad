@@ -1,3 +1,30 @@
+/*
+  Copyright (c) 2006 - 2016
+  ILK  Tilburg University
+  CLST Radboud University
+
+  This file is part of toad
+
+  toad is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  toad is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+  For questions and suggestions, see:
+      https://github.com/LanguageMachines/toad/issues
+  or send mail to:
+      lamasoftware (at ) science.ru.nl
+*/
+
 /* make_lemmatizer_instances - from cgn_wordforms_with_lemmas_postags,
    build an instance base of lemmatizer instances, for the CGN
    memory-based lemmatizer MBLEM */

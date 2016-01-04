@@ -1,9 +1,10 @@
-Toad/trunk/README.mblem
+README.mblem
 
-Toad: Trainer Of All Data, the Frog training collection
+part of Toad: Trainer Of All Data, the Frog training collection
 
-Antal van den Bosch / Ko van der Sloot. March 21 2012
-ILK Research Group, Tilburg University
+(C) Antal van den Bosch / Ko van der Sloot. 2012-2016
+ILK  Research Group, Tilburg University
+CLST Research Group, Radboud University
 
 Describes the steps to create a Timbl tree for the MBLEM module in Frog.
 

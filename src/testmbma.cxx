@@ -1,18 +1,15 @@
 /*
-  Copyright (c) 2006 - 2015
-  Tilburg University
-  Radboud University
+  Copyright (c) 2015 - 2016
+  CLST Radboud University
 
-  A Morphological-Analyzer for Dutch
+  This file is part of toad
 
-  This file is part of frog
-
-  frog is free software; you can redistribute it and/or modify
+  toad is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation; either version 3 of the License, or
   (at your option) any later version.
 
-  frog is distributed in the hope that it will be useful,
+  toad is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
@@ -20,12 +17,12 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  For questions and suggestions, see:
-      http://ilk.uvt.nl/software.html
-  or send mail to:
-      timbl@uvt.nl
-*/
 
+  For questions and suggestions, see:
+      https://github.com/LanguageMachines/toad/issues
+  or send mail to:
+      lamasoftware (at ) science.ru.nl
+*/
 
 #include <string>
 #include <iostream>
@@ -159,7 +156,7 @@ void Test( istream& in ){
 
 int main(int argc, char *argv[]) {
   std::ios_base::sync_with_stdio(false);
-  cerr << "mbma_tester " << VERSION << " (c) LaMa 1998 - 2015" << endl;
+  cerr << "mbma_tester " << VERSION << " (c) LaMa 1998 - 2016" << endl;
   cerr << "Language Machine Group, Radboud University" << endl;
   TiCC::CL_Options Opts("Vt:d:hc:","version");
   try {
