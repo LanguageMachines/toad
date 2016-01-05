@@ -57,8 +57,7 @@ UnicodeString UnicodeStringFromS( const string& s, const string& enc = "UTF8" ){
 }
 
 void usage(){
-  cerr << "checkmblem [-i inputfile] [-o outputfile]"
-       << endl;
+  cerr << "checkmblem [-i inputfile]" << endl;
 }
 
 template< typename T >
@@ -82,8 +81,10 @@ bool isException( const string& s ){
 }
 
 int main(int argc, char * const argv[] ) {
+  TiCC::CL_Options opts("i:","");
+  opts.parse_args( argc, argv );
   string inpname = "mblem.lex";
-
+  opts.extract( 'i', inpname );
   ifstream bron( inpname.c_str() );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;

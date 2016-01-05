@@ -98,7 +98,6 @@ void check_word( const string& word, bool doMor ){
   set<int> fails;
   for ( size_t i=0; i < ana.size(); i++ ){
     bool lem_found = false;
-    bool mor_found = true;
     for ( size_t j=0; j < ana[i].size(); j++ ){
       string mor = ana[i][j];
       mor = TiCC::lowercase(mor);
@@ -258,7 +257,7 @@ int main(int argc, char * const argv[] ) {
     cout << "checking the morphemes in " << inpname << endl;
     while ( getline(bron, line ) ){
       vector<string> parts;
-      int num = TiCC::split( line, parts );
+      TiCC::split( line, parts );
       check_word( parts[0], doMor );
     }
   }
@@ -267,7 +266,7 @@ int main(int argc, char * const argv[] ) {
     cout << "checking the morphemes in " << lexname << endl;
     while ( getline(bron, line ) ){
       vector<string> parts;
-      int num = TiCC::split_at( line, parts, " " );
+      TiCC::split_at( line, parts, " " );
       check_word( parts[0], doMor );
     }
   }

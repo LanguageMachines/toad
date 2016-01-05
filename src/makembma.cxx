@@ -172,11 +172,11 @@ int main(int argc, char * const argv[] ) {
 	spitOut( *os, prevword, morphemes );
       }
       prevword = word;
-      for ( int i=0; i < morphemes.size(); ++i ){
+      for ( size_t i=0; i < morphemes.size(); ++i ){
 	morphemes[i].clear();
       }
     }
-    for ( int i=0; i < parts.size(); ++i ){
+    for ( size_t i=0; i < parts.size(); ++i ){
       morphemes[i].insert(parts[i]);
     }
   }
