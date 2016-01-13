@@ -87,6 +87,15 @@ PKG_CHECK_MODULES([folia],[folia >= 0.11])
 CXXFLAGS="$CXXFLAGS $folia_CFLAGS"
 LIBS="$folia_LIBS $LIBS"
 
+AC_ARG_WITH(ucto,
+       [  --with-ucto=DIR       use ucto installed in <DIR>],
+       [PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"],
+       [PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$PKG_CONFIG_PATH"])
+AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
+PKG_CHECK_MODULES([ucto],[ucto >= 0.8.1])
+CXXFLAGS="$CXXFLAGS $ucto_CFLAGS"
+LIBS="$ucto_LIBS $LIBS"
+
 AC_ARG_WITH(frog,
        [  --with-frog=DIR       use frog installed in <DIR>],
        [PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"],

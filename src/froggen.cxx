@@ -36,6 +36,7 @@
 #include "ticcutils/Configuration.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
+#include "ucto/tokenize.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
 #include "config.h"
@@ -164,14 +165,14 @@ void create_tagger( const string& base_name, const string& corpus_name ){
   if ( M_opt.empty() ){
     M_opt = dutch_M_opt;
   }
-  string N_opt = config.lookUp( "N", "tagger" );
+  string N_opt = config.lookUp( "n", "tagger" );
   string taggercommand = "-T " + tag_data_name
     + " -s " + base_name + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt;
   if ( !N_opt.empty() ){
-    taggercommand += " -N " + N_opt;
+    taggercommand += " -n " + N_opt;
   }
   taggercommand += " -DLogSilent"; // shut up
   cout << "start tagger: " << taggercommand << endl;
@@ -373,10 +374,32 @@ void create_lemmatizer( const multimap<UnicodeString,map<UnicodeString,set<Unico
   train_mblem( mblem_data_file, mblem_tree_file );
 }
 
+void check_data( Tokenizer::TokenizerClass *tokenizer,
+		 const multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>>& data ){
+  for ( const auto& word : data ){
+    int num = tokenizer->tokenizeLine( word.first );
+    if ( num != 1 ){
+      cerr << "the provided tokenizer doesn't handle '" << word.first
+	   << "' well (splits it into " << num << " parts.)" << endl;
+      vector<string> v = tokenizer->getSentences();
+      cerr << "[";
+      for ( const auto& w : v ){
+	cerr << w << " ";
+      }
+      cerr << "]" << endl;
+    }
+    tokenizer->reset();
+  }
+}
 void create_frog_cfg( const string& frog_cfg,
 		      const string& mbt_settings,
-		      const string& mblem_tree ){
+		      const string& mblem_tree,
+		      const string& tokfile ){
   ofstream os( frog_cfg );
+  if ( !tokfile.empty() ) {
+    os << "[[tokenizer]]" << endl;
+    os << "rulesFile=\"./" << tokfile << "\"" << endl;
+  }
   os << "[[tagger]]" << endl;
   os << "settings=" << mbt_settings << endl;
   os << "set=\"http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn\"" << endl;
@@ -390,12 +413,13 @@ void create_frog_cfg( const string& frog_cfg,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("T:l:e:O:c:hV","");
+  TiCC::CL_Options opts("t:T:l:e:O:c:hV","");
   opts.parse_args( argc, argv );
 
   string corpusname;
   string outputdir;
   string lemma_name;
+  string tokfile;
   string configfile;
   string encoding = "UTF-8";
 
@@ -422,11 +446,12 @@ int main( int argc, char * const argv[] ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
+    cout << "using configuration: " << configfile << endl;
   }
   opts.extract( 'l', lemma_name );
   if ( !lemma_name.empty() ){
     if ( !isFile(lemma_name) ){
-      cerr << "could not open lemma list '" << lemma_name << "'" << endl;
+      cerr << "unable to find: '" << lemma_name << "'" << endl;
       return EXIT_FAILURE;
     }
   }
@@ -438,6 +463,23 @@ int main( int argc, char * const argv[] ) {
       cerr << "output dir not usable: " << outputdir << endl;
       exit(EXIT_FAILURE);
     }
+  }
+  opts.extract( 't', tokfile );
+  Tokenizer::TokenizerClass *tokenizer = 0;
+  if ( !tokfile.empty() ) {
+    if ( !isFile(tokfile) ){
+      cerr << "unable to find: '" << tokfile << "'" << endl;
+      exit( EXIT_FAILURE );
+    }
+    if ( !outputdir.empty() ){
+      string outname = outputdir + tokfile;
+      ofstream os( outname );
+      ifstream is( tokfile );
+      os << is.rdbuf();
+      tokfile = outname;
+    }
+    tokenizer = new Tokenizer::TokenizerClass();
+    tokenizer->init( tokfile );
   }
   opts.extract( 'e', encoding );
   string mblem_particles = config.lookUp( "particles", "mblem" );
@@ -470,8 +512,12 @@ int main( int argc, char * const argv[] ) {
   }
   string mblem_full_name = outputdir + mblem_base_name;
   string frog_cfg = outputdir + "frog.cfg.template";
+  if ( tokenizer ){
+    check_data( tokenizer, data );
+  }
   create_tagger( tag_full_name, corpusname );
   create_lemmatizer( data, mblem_full_name );
-  create_frog_cfg( frog_cfg, tag_base_name + ".settings" , mblem_base_name );
+  create_frog_cfg( frog_cfg, tag_base_name + ".settings" ,
+		   mblem_base_name, tokfile );
   return EXIT_SUCCESS;
 }
