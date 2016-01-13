@@ -149,23 +149,24 @@ void create_tagger( const string& base_name, const string& corpus_name ){
     }
   }
   cout << "created an inputfile for the tagger: " << tag_data_name << endl;
-  string p_pat = config.lookUp( "p", "tagger" );
+  string p_pat = TiCC::trim( config.lookUp( "p", "tagger" ), " \"" );
   if ( p_pat.empty() ){
     p_pat = dutch_p_pat;
   }
-  string P_pat = config.lookUp( "P", "tagger" );
+  string P_pat = TiCC::trim( config.lookUp( "P", "tagger" ), " \"" );
   if ( P_pat.empty() ){
-    P_pat = dutch_P_pat;
+    P_pat =  dutch_P_pat;
   }
-  string timblopts = config.lookUp( "timblOpts", "tagger" );
+  string timblopts = TiCC::trim( config.lookUp( "timblOpts", "tagger" )
+				 , " \"" );
   if ( timblopts.empty() ){
     timblopts = dutch_timblopts;
   }
-  string M_opt = config.lookUp( "M", "tagger" );
+  string M_opt = TiCC::trim( config.lookUp( "M", "tagger" ), " \"" );
   if ( M_opt.empty() ){
     M_opt = dutch_M_opt;
   }
-  string N_opt = config.lookUp( "n", "tagger" );
+  string N_opt = TiCC::trim(config.lookUp( "n", "tagger" ), " \"" );
   string taggercommand = "-T " + tag_data_name
     + " -s " + base_name + ".settings"
     + " -p " + p_pat + " -P " + P_pat
@@ -356,7 +357,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
 }
 
 void train_mblem( const string& inputfile, const string& outputfile ){
-  string timblopts = config.lookUp( "timblOpts", "mblem" );
+  string timblopts = TiCC::trim( config.lookUp( "timblOpts", "mblem" ), " \"" );
   if ( timblopts.empty() ){
     timblopts = dutch_lemma_timbl_opts;
   }
@@ -482,7 +483,8 @@ int main( int argc, char * const argv[] ) {
     tokenizer->init( tokfile );
   }
   opts.extract( 'e', encoding );
-  string mblem_particles = config.lookUp( "particles", "mblem" );
+  string mblem_particles = TiCC::trim( config.lookUp( "particles", "mblem" ),
+				       " \"" );
   if ( !mblem_particles.empty() ){
     fill_particles( mblem_particles );
   }
@@ -501,12 +503,13 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( is, data, encoding );
     cout << "done" << endl;
   }
-  string tag_base_name = config.lookUp( "baseName", "tagger" );
+  string tag_base_name = TiCC::trim( config.lookUp( "baseName", "tagger" ), " \"");
   if ( tag_base_name.empty() ){
     tag_base_name = "froggen";
   }
   string tag_full_name = outputdir + tag_base_name;
-  string mblem_base_name = config.lookUp( "treeFile", "mblem" );
+  string mblem_base_name = TiCC::trim( config.lookUp( "treeFile", "mblem" ),
+				       " \"" );;
   if ( mblem_base_name.empty() ){
     mblem_base_name = "froggen.tree";
   }
