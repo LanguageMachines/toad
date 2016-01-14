@@ -1,3 +1,5 @@
+*.tar.gz
+ChangeLog
 Makefile
 Makefile.in
 compile

@@ -1,5 +1,11 @@
-0.1
+toad 0.2 2016-01-14
+[Ko van der Sloot]
+* moved repository to GitHub
+* added Travis support
+* added first version of froggen. The Frog Generator
+* work in progress
 
+toad 0.1
 * started
 *  included old Antal stuff
 *  autoconfiscated
