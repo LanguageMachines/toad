@@ -36,6 +36,7 @@
 #include "ticcutils/Configuration.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
+#include "libfolia/folia.h"
 #include "ucto/tokenize.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
