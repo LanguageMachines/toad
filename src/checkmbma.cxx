@@ -39,7 +39,6 @@
 #include "ticcutils/Configuration.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
-#include "libfolia/foliautils.h"
 #include "libfolia/folia.h"
 #include "ucto/tokenize.h"
 #include "frog/Frog.h"

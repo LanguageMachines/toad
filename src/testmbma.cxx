@@ -38,7 +38,7 @@
 #include "ticcutils/PrettyPrint.h"
 #include "ucto/unicode.h"
 #include "ticcutils/LogStream.h"
-#include "libfolia/document.h"
+#include "libfolia/folia.h"
 
 #include "frog/cgn_tagger_mod.h"
 #include "frog/mbma_mod.h"
