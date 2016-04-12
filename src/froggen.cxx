@@ -429,7 +429,7 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("t:T:l:e:O:c:hV","");
+  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","");
   try {
     opts.parse_args( argc, argv );
   }
@@ -438,6 +438,7 @@ int main( int argc, char * const argv[] ) {
     exit(EXIT_FAILURE);
   }
 
+  string base_name;
   string corpusname;
   string outputdir;
   string lemma_name;
@@ -470,7 +471,12 @@ int main( int argc, char * const argv[] ) {
     }
     cout << "using configuration: " << configfile << endl;
   }
-  frog_config = my_config;
+  if ( !opts.extract( 'b', base_name ) ){
+    base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
+    if ( base_name.empty() ){
+      base_name = "morgen";
+    }
+  }
   opts.extract( 'l', lemma_name );
   if ( !lemma_name.empty() ){
     if ( !isFile(lemma_name) ){
@@ -487,6 +493,7 @@ int main( int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
+  frog_config = my_config;
   opts.extract( 't', tokfile );
   Tokenizer::TokenizerClass *tokenizer = 0;
   if ( !tokfile.empty() ) {
@@ -524,10 +531,7 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( is, data, encoding );
     cout << "done" << endl;
   }
-  string base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
-  if ( base_name.empty() ){
-    base_name = "froggen";
-  }
+
   string tag_full_name = outputdir + base_name;
   string mblem_tree_name = TiCC::trim( my_config.lookUp( "treeFile", "mblem" ),
 				       " \"" );
