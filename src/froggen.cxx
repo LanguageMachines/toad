@@ -48,6 +48,8 @@ using namespace TiCC;
 int debug = 0;
 const int HISTORY = 20;
 
+bool have_config = false;
+
 // some defaults (for Dutch)
 const string dutch_particles = "[WW(vd/be] [WW(vd/ge]";
 const string dutch_p_pat = "dddwfWawa";
@@ -55,6 +57,8 @@ const string dutch_P_pat = "chnppdddwFawasss";
 const string dutch_timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
 const string dutch_M_opt = "500";
 const string dutch_lemma_timbl_opts = "-a1 -w2 +vS";
+const string dutch_mblem_set = "http://ilk.uvt.nl/folia/sets/frog-mblem-nl";
+const string dutch_tagger_set = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
 
 static Configuration my_config;
 static Configuration frog_config;
@@ -469,6 +473,7 @@ int main( int argc, char * const argv[] ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
+    have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
   if ( !opts.extract( 'b', base_name ) ){
@@ -515,10 +520,12 @@ int main( int argc, char * const argv[] ) {
   opts.extract( 'e', encoding );
   string mblem_particles = TiCC::trim( my_config.lookUp( "particles", "mblem" ),
 				       " \"" );
-  if ( mblem_particles.empty() ){
+  if ( mblem_particles.empty() && !have_config ){
     mblem_particles = dutch_particles;
   }
-  fill_particles( mblem_particles );
+  if ( !mblem_particles.empty() ){
+    fill_particles( mblem_particles );
+  }
   multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>> data;
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
@@ -540,12 +547,12 @@ int main( int argc, char * const argv[] ) {
   }
   string mblem_full_name = outputdir + mblem_tree_name;
   string mblem_set_name = TiCC::trim( my_config.lookUp( "set", "mblem" ) );
-  if ( mblem_set_name.empty() ){
-    mblem_set_name = "http://ilk.uvt.nl/folia/sets/frog-mblem-nl";
+  if ( mblem_set_name.empty() && !have_config ){
+    mblem_set_name = dutch_mblem_set;
   }
   string tagger_set_name = TiCC::trim( my_config.lookUp( "set", "tagger" ) );
-  if ( tagger_set_name.empty() ){
-    tagger_set_name = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
+  if ( tagger_set_name.empty() && !have_config ){
+    tagger_set_name = dutch_tagger_set;
   }
   if ( tokenizer ){
     check_data( tokenizer, data );
