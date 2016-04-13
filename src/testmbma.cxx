@@ -145,7 +145,7 @@ void Test( istream& in ){
     }
     else {
       for ( auto const& r : rules ){
-	cout << uWord << "==> " << r->extract_morphemes()
+	cout << uWord << "==> " << r->morpheme_string()
 	     << " " << r->tag << endl;
 	delete r;
       }

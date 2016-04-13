@@ -93,42 +93,43 @@ void check_word( const string& word, bool doMor ){
   if ( us != ls )
     return;
   myMbma.Classify( ls );
-  vector<vector<string> > ana = myMbma.getResult();
-  set<int> fails;
-  for ( size_t i=0; i < ana.size(); i++ ){
+  vector<string> anas = myMbma.getResult();
+  set<string> fails;
+  for ( const auto& ana : anas ){
     bool lem_found = false;
-    for ( size_t j=0; j < ana[i].size(); j++ ){
-      string mor = ana[i][j];
-      mor = TiCC::lowercase(mor);
-      if ( mor == word ){
+    vector<string> mors;
+    TiCC::split_at_first_of( ana, mors, "[]" );
+    bool first = true;
+    for ( const auto& mor : mors ){
+      string mor1 = TiCC::lowercase(mor);
+      if ( mor1 == word ){
 	lem_found = true;
 	break;
       }
-      else if ( lexicon.find(mor) != lexicon.end() ){
-	//	  cerr << "found lemma " << mor << endl;
+      else if ( lexicon.find(mor1) != lexicon.end() ){
+	//	  cerr << "found lemma " << mor1 << endl;
 	lem_found = true;
       }
       else if ( doMor
-		&& mor.size() != 1
-		&& j != 0
-		&& mor_lexicon.find(mor) == mor_lexicon.end() ){
+		&& mor1.size() != 1
+		&& !first
+		&& mor_lexicon.find(mor1) == mor_lexicon.end() ){
 	//	  cerr << "NOT found mor " << mor << endl;
-	fails.insert(j);
+	fails.insert(mor1);
       }
+      first = false;
     }
     if ( !lem_found ){
       using TiCC::operator<<;
-      cerr << "UNK LEMMA " << word << " - " << ana[i] << endl;
+      cerr << "UNK LEMMA " << word << " - " << ana << endl;
     }
     else if ( fails.size() > 0 ){
       using TiCC::operator<<;
       cerr << "UNK MOR ";
-      set<int>::const_iterator it = fails.begin();
-      while ( it != fails.end() ){
-	cerr << "[" << ana[i][*it] << "] ";
-	++it;
+      for ( const auto& f : fails ){
+	cerr << "[" << f << "] ";
       }
-      cerr << word << " - " << ana[i] << endl;
+      cerr << word << " - " << ana << endl;
     }
   }
 }
