@@ -47,15 +47,18 @@
 using namespace std;
 using namespace TiCC;
 
-int debug = 0;
 const int HISTORY = 20;
-#define LEFT 6
-#define RIGHT 6
+const int LEFT = 6;
+const int RIGHT = 6;
+
+int debug = 0;
+bool have_config = false;
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
 
 // some defaults (for Dutch)
 const string dutch_morph_timbl_opts = "-a1 -w2 +vS";
+const string dutch_mbma_set = "http://ilk.uvt.nl/folia/sets/frog-mbma-nl";
 
 static Configuration my_config;
 static Configuration frog_config;
@@ -212,6 +215,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
+    have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
   opts.extract( 'O', outputdir );
@@ -246,18 +250,23 @@ int main(int argc, char * const argv[] ) {
   }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
-  string treename = base_name + ".tree";
-  string full_treename = outputdir + base_name + ".tree";
+  string treename = TiCC::trim( my_config.lookUp( "treeFile", "mbma" ) );
+  if ( treename.empty() ){
+    treename = base_name + ".tree";
+  }
+  frog_config.setatt( "treeFile", treename, "mbma" );
+  string full_treename = outputdir + treename;
   create_instance_file( inpname, outname );
   create_instance_base( outname, full_treename );
 
   frog_config.clearatt( "baseName" );
-  frog_config.setatt( "treeFile", treename, "mbma" );
   string mbma_set_name = TiCC::trim( my_config.lookUp( "set", "mbma" ) );
-  if ( mbma_set_name.empty() ){
-    mbma_set_name = "http://ilk.uvt.nl/folia/sets/frog-mbma-nl";
+  if ( mbma_set_name.empty() && !have_config ){
+    mbma_set_name = dutch_mbma_set;
   }
-  frog_config.setatt( "set", mbma_set_name, "mbma" );
+  if ( !mbma_set_name.empty() ){
+    frog_config.setatt( "set", mbma_set_name, "mbma" );
+  }
   string frog_cfg = outputdir + "frog.cfg.template";
   frog_config.create_configfile( frog_cfg );
   cout << "stored a frog configfile template: " << frog_cfg << endl;
