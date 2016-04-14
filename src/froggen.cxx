@@ -569,7 +569,7 @@ int main( int argc, char * const argv[] ) {
     }
   }
   frog_config.clearatt( "baseName" );
-  frog_config.setatt( "particles", mblem_particles, "mblem" );
+  frog_config.clearatt( "particles" );
   frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
   frog_config.setatt( "set", mblem_set_name, "mblem" );
   frog_config.setatt( "set", tagger_set_name, "tagger" );
