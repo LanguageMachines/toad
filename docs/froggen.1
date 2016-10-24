@@ -1,0 +1,103 @@
+.TH froggen 1 "2016 october 24"
+
+.SH NAME
+froggen \- A Generator for Frog datafiles
+.SH SYNOPSYS
+froggen [options]
+
+froggen \-T tagged\-corpus -l additional\-lemmas -c config\-file
+
+.SH DESCRIPTION
+froggen will convert a datafile containing words, lemmas and POS\-tags into a
+complete dataset to run Frog. Additional extra lemmas can be provided.
+
+.SH OPTIONS
+
+.BR \-c " <configfile>"
+.RS
+Based on the other parameters, create a configfile which should be directly
+usable for running
+.B frog
+
+.RE
+
+.BR \-e " <encoding>"
+.RS
+assume the input files to be in the specified
+.B encoding.
+.B Froggen
+will convert all data to UTF8, the encoding which
+.B frog
+assumes.
+.RE
+
+.BR \-l " <lemmas>"
+.RS
+provide additional lemmas, in the format:
+
+word <WS> lemma <WS> POS\-tag
+
+Where WS is whitespace like spaces or tab(s).
+
+.RE
+
+.BR \-T "<tagged corpus>"
+.RS
+This is the main input file for
+.B froggen.
+It should consist of tagged sentences in the format:
+
+word <WS> lemma <WS> POS\-tag
+
+Where WS is whitespace like spaces or tab(s).
+
+Sentences must be separated by the symbol
+.I <utt>
+on a separate line.
+
+example:
+.nf
+Zijn	zijn	WW(pv,tgw,mv)
+dat	dat	VNW(aanw,pron,stan,vol,3o,ev)
+standaardmaat	standaardmaat	N(soort,ev,basis,zijd,stan)
+?	?	LET()
+<utt>
+Nou	Nou	BW()
+je	je	VNW(pers,pron,nomin,red,2v,ev)
+hebt	hebben	WW(pv,tgw,met-t)
+ze	ze	VNW(pers,pron,stan,red,3,mv)
+in	in	VZ(init)
+rond	rond	ADJ(vrij,basis,zonder)
+en	en	VG(neven)
+vierkant	vierkant	ADJ(vrij,basis,zonder)
+.	.	LET()
+<utt>
+.fi
+.RE
+
+.BR \-h
+.RS
+give some help
+.RE
+
+.BR \-O " <outputdir>"
+.RS
+send all output to 'outputdir' instead of the current directory.
+This option is highly recommened while froggen will generated a bunch of files.
+.RE
+
+.BR \-V " or " \-\-version
+.RS
+show version info
+.RE
+
+.SH BUGS
+likely
+
+.SH AUTHORS
+Ko van der Sloot K.vanderSloot@let.ru.nl
+
+Antal van den Bosch Timbl@uvt.nl
+
+.SH SEE ALSO
+.BR frog (1)
