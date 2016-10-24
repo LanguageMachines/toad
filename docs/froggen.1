@@ -13,12 +13,17 @@ complete dataset to run Frog. Additional extra lemmas can be provided.
 
 .SH OPTIONS
 
+.BR \-b " <basename>"
+.RS
+Use this name as the base for all outputfiles that will be created.
+.RE
+
 .BR \-c " <configfile>"
 .RS
-Based on the other parameters, create a configfile which should be directly
-usable for running
-.B frog
+Specify a configuration file in Frog style.
 
+The parameters found here will be used in training of the lemmatizer and the
+tagger.
 .RE
 
 .BR \-e " <encoding>"
@@ -41,7 +46,25 @@ Where WS is whitespace like spaces or tab(s).
 
 .RE
 
-.BR \-T "<tagged corpus>"
+.BR \-t " <tokenizer>"
+.RS
+specify a rules file for an
+.B ucto
+tokenizer. It s added to the frog configuration
+.B AND
+.B froggen
+will check if the input is compatible with the tokenizer.
+
+(e.g. when an input contains an entry like:
+.nf
+foo-bars foo-bar PLURAL_NOUN
+.fi
+and the tokenizer would split 'foo-bars' into two word: 'foo' and 'bars', the
+input, however correct, will lead to lemmatizer and tagger rules which will
+never be used, given this tokenizer)
+.RE
+
+.BR \-T " <tagged corpus>"
 .RS
 This is the main input file for
 .B froggen.
@@ -100,4 +123,4 @@ Ko van der Sloot K.vanderSloot@let.ru.nl
 Antal van den Bosch Timbl@uvt.nl
 
 .SH SEE ALSO
-.BR frog (1)
+.BR ucto (1) frog (1)

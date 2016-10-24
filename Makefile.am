@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 --install
 
-SUBDIRS = src
+SUBDIRS = src docs
 
 EXTRA_DIST = bootstrap.sh AUTHORS TODO NEWS
 

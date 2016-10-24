@@ -188,7 +188,7 @@ void create_instance_base( const string& dataname, const string& treename ){
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hV","");
+  TiCC::CL_Options opts("b:O:c:hV","version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -205,7 +205,7 @@ int main(int argc, char * const argv[] ) {
     exit( EXIT_SUCCESS );
   }
 
-  if ( opts.extract( 'V' ) ){
+  if ( opts.extract( 'V' ) || opts.extract( "version" ) ){
     cerr << "VERSION: " << VERSION << endl;
     exit( EXIT_SUCCESS );
   }

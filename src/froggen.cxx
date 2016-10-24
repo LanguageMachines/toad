@@ -433,7 +433,7 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","");
+  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -455,7 +455,7 @@ int main( int argc, char * const argv[] ) {
     exit( EXIT_SUCCESS );
   }
 
-  if ( opts.extract( 'V' ) ){
+  if ( opts.extract( 'V' ) || opts.extract( "version" ) ){
     cerr << "VERSION: " << VERSION << endl;
     exit( EXIT_SUCCESS );
   }
@@ -479,7 +479,7 @@ int main( int argc, char * const argv[] ) {
   if ( !opts.extract( 'b', base_name ) ){
     base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
     if ( base_name.empty() ){
-      base_name = "morgen";
+      base_name = "froggen";
     }
   }
   opts.extract( 'l', lemma_name );

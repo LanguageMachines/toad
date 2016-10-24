@@ -66,7 +66,7 @@ AC_ARG_WITH(timbl,
        [  --with-timbl=DIR       use timbl installed in <DIR>],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$withval/lib/pkgconfig"],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$prefix/lib/pkgconfig"])
-PKG_CHECK_MODULES([timbl], [timbl >= 6.4.4] )
+PKG_CHECK_MODULES([timbl], [timbl >= 6.4.8] )
 CXXFLAGS="$CXXFLAGS $timbl_CFLAGS"
 LIBS="$timbl_LIBS $LIBS"
 
@@ -74,7 +74,7 @@ AC_ARG_WITH(mbt,
        [  --with-mbt=DIR       use mbt installed in <DIR>],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$withval/lib/pkgconfig"],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$prefix/lib/pkgconfig"])
-PKG_CHECK_MODULES([mbt], [mbt >= 3.2.12] )
+PKG_CHECK_MODULES([mbt], [mbt >= 3.2.16] )
 CXXFLAGS="$CXXFLAGS $mbt_CFLAGS"
 LIBS="$mbt_LIBS $LIBS"
 
@@ -82,7 +82,7 @@ AC_ARG_WITH(ticcutils,
        [  --with-ticcutils=DIR       use ticcutils installed in <DIR>],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$withval/lib/pkgconfig"],
        [PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$prefix/lib/pkgconfig"])
-PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.12] )
+PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.14] )
 CXXFLAGS="$CXXFLAGS $ticcutils_CFLAGS"
 LIBS="$ticcutils_LIBS $LIBS"
 
@@ -90,8 +90,8 @@ AC_ARG_WITH(folia,
        [  --with-folia=DIR       use libfolia installed in <DIR>],
        [PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"],
        [PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$PKG_CONFIG_PATH"])
-AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
-PKG_CHECK_MODULES([folia],[folia >= 1.0])
+#AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
+PKG_CHECK_MODULES([folia],[folia >= 1.4])
 CXXFLAGS="$CXXFLAGS $folia_CFLAGS"
 LIBS="$folia_LIBS $LIBS"
 
@@ -99,8 +99,8 @@ AC_ARG_WITH(ucto,
        [  --with-ucto=DIR       use ucto installed in <DIR>],
        [PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"],
        [PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$PKG_CONFIG_PATH"])
-AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
-PKG_CHECK_MODULES([ucto],[ucto >= 0.8.1])
+#AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
+PKG_CHECK_MODULES([ucto],[ucto >= 0.9.3])
 CXXFLAGS="$CXXFLAGS $ucto_CFLAGS"
 LIBS="$ucto_LIBS $LIBS"
 
@@ -108,8 +108,8 @@ AC_ARG_WITH(frog,
        [  --with-frog=DIR       use frog installed in <DIR>],
        [PKG_CONFIG_PATH="$withval/lib/pkgconfig:$PKG_CONFIG_PATH"],
        [PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$PKG_CONFIG_PATH"])
-AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
-PKG_CHECK_MODULES([frog],[frog >= 0.12.18])
+#AC_MSG_NOTICE( [pkg-config search path: $PKG_CONFIG_PATH] )
+PKG_CHECK_MODULES([frog],[frog >= 0.13.5])
 CXXFLAGS="$CXXFLAGS $frog_CFLAGS"
 LIBS="$frog_LIBS $LIBS"
 
@@ -117,4 +117,5 @@ LIBS="$frog_LIBS $LIBS"
 AC_OUTPUT([
   Makefile
   src/Makefile
+  docs/Makefile
 ])
