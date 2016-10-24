@@ -1,3 +1,9 @@
+toad 0.3 2016-10-24
+[Ko van der Sloot]
+* first official release on Zenodo
+* manual page added
+* several bug fixes.
+
 toad 0.2 2016-01-14
 [Ko van der Sloot]
 * moved repository to GitHub
