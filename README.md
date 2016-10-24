@@ -35,11 +35,11 @@ included as part of our software distribution LaMachine:
 https://proycon.github.io/LaMachine .
 
 To compile from source instead:
-1. ``sh bootstrap.sh``
-2. ``configure``
-3. ``make``
-4. ``make install``
-5. *optional:* ``make check``
+* ``sh bootstrap.sh``
+* ``./configure``
+* ``make``
+* ``make install``
+* *optional:* ``make check``
 
 --------------------------------
 Documentation
@@ -47,6 +47,7 @@ Documentation
 
 For ``froggen``, consult the man page and/or section 4.4 in the Frog manual.
 
-Also see ``README.mblem`` and ``README.mbma``
+Also see ``README.mblem`` for ``makemblem`` and ``README.mbma`` for
+`'makembma``.
 
 
