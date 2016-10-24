@@ -13,7 +13,7 @@ in any language and tag set.
 
 other contained tools, (experts only) are:
 
-* ``morgen` - 	generate morphological (MBMA) datasets based on CELEX data
+* ``morgen`` - 	generate morphological (MBMA) datasets based on CELEX data
 * ``makembma``	- old preliminary version of morgen
 * ``makemblem``	- old preliminary version of the lemmatizing part of ``froggen``
 * ``checkmbma``	- check an MBMA configuration for inconsistencies
