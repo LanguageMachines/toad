@@ -1,5 +1,5 @@
 ==============================================================================
-Toad - A collection of tools to genereate datafiles for Frog
+Toad - A collection of tools to generate datafiles for Frog
 ==============================================================================
 
 This first release contains the main Frog datagenerator **froggen**
