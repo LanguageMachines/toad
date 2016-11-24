@@ -111,6 +111,9 @@ bool parse_args( TiCC::CL_Options& Opts ) {
   else {
     fileNames = Opts.getMassOpts();
   }
+  if ( Opts.extract( "deep-morph" ) ){
+    configuration.setatt( "deep-morph", "1", "mbma" );
+  };
   return true;
 }
 
@@ -126,7 +129,7 @@ bool init(){
   return true;
 }
 
-void Test( istream& in ){
+void Test( istream& in, bool deep ){
   string line;
   while ( getline( in, line ) ){
     line = TiCC::trim( line );
@@ -145,7 +148,7 @@ void Test( istream& in ){
     }
     else {
       for ( auto const& r : rules ){
-	cout << uWord << "==> " << r->morpheme_string()
+	cout << uWord << "==> " << r->morpheme_string( deep )
 	     << " " << r->tag << endl;
 	delete r;
       }
@@ -159,7 +162,7 @@ int main(int argc, char *argv[]) {
   std::ios_base::sync_with_stdio(false);
   cerr << "mbma_tester " << VERSION << " (c) LaMa 1998 - 2016" << endl;
   cerr << "Language Machine Group, Radboud University" << endl;
-  TiCC::CL_Options Opts("Vt:d:hc:","version");
+  TiCC::CL_Options Opts("Vt:d:hc:","version,deep-morph");
   try {
     Opts.parse_args(argc, argv);
   }
@@ -174,12 +177,13 @@ int main(int argc, char *argv[]) {
       cerr << "terminated." << endl;
       return EXIT_FAILURE;
     }
+    bool deep = !configuration.getatt( "deep-morph", "mbma" ).empty();
     for ( size_t i=0; i < fileNames.size(); ++i ){
       string TestFileName = fileNames[i];
       ifstream in(TestFileName);
       if ( in.good() ){
 	cerr << "Processing: " << TestFileName << endl;
-	Test( in );
+	Test( in, deep );
       }
       else {
 	cerr << "unable to open: " << TestFileName << endl;
