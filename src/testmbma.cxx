@@ -54,7 +54,7 @@ LogStream *theErrLog = &my_default_log;  // fill the externals
 vector<string> fileNames;
 
 Configuration configuration;
-static string configDir = string(SYSCONF_PATH) + "/frog/";
+static string configDir = string(SYSCONF_PATH) + "/frog/nld/";
 static string configFileName = configDir + "frog.cfg";
 static Mbma myMbma(theErrLog);
 

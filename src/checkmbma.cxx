@@ -49,7 +49,7 @@ using namespace std;
 TiCC::LogStream *theErrLog = new TiCC::LogStream(cerr);
 
 TiCC::Configuration configuration;
-static string configDir = string(SYSCONF_PATH) + "/frog/";
+static string configDir = string(SYSCONF_PATH) + "/frog/nld/";
 static string configFileName = configDir + "frog.cfg";
 
 Mbma myMbma(theErrLog);
