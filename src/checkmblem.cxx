@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010 - 2016
+  Copyright (c) 2010 - 2017
   ILK  Tilburg University
   CLST Radboud University
 
