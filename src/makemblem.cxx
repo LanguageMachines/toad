@@ -107,13 +107,13 @@ int main( int argc, char * const argv[] ) {
 
   ifstream tf;
   if ( doTrans ) {
-    tf.open( transname.c_str() );
+    tf.open( transname );
     if ( !tf ){
       cerr << "could not open translations file '" << transname << "'" << endl;
       return EXIT_FAILURE;
     }
   }
-  ifstream bron( inpname.c_str() );
+  ifstream bron( inpname );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;
     return EXIT_FAILURE;
@@ -122,7 +122,7 @@ int main( int argc, char * const argv[] ) {
   if ( outname.empty() )
     os = &cout;
   else {
-    os = new ofstream( outname.c_str() );
+    os = new ofstream( outname );
     if ( !os ){
       cerr << "could not open output file '" << outname << "'" << endl;
       return EXIT_FAILURE;
@@ -229,8 +229,9 @@ int main( int argc, char * const argv[] ) {
     int ident=0;
     while ( ident < wordform.length() &&
 	    ident < lemma.length() &&
-	    wordform[ident]==lemma[ident] )
+	    wordform[ident]==lemma[ident] ){
       ident++;
+    }
     if ( ident < wordform.length() ) {
       for ( int i=ident; i< wordform.length(); i++) {
 	deleted += wordform[i];

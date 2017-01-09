@@ -160,7 +160,7 @@ int main(int argc, char * const argv[] ) {
     }
   }
 
-  ifstream bron( lexname.c_str() );
+  ifstream bron( lexname );
   if ( !bron ){
     cerr << "could not open mbma file '" << lexname << "'" << endl;
     return EXIT_FAILURE;
@@ -253,7 +253,7 @@ int main(int argc, char * const argv[] ) {
     }
   }
   else if ( !inpname.empty() ){
-    bron.open( inpname.c_str() );
+    bron.open( inpname );
     cout << "checking the morphemes in " << inpname << endl;
     while ( getline(bron, line ) ){
       vector<string> parts;
@@ -262,7 +262,7 @@ int main(int argc, char * const argv[] ) {
     }
   }
   else {
-    bron.open( lexname.c_str() );
+    bron.open( lexname );
     cout << "checking the morphemes in " << lexname << endl;
     while ( getline(bron, line ) ){
       vector<string> parts;

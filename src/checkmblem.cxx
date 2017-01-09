@@ -84,7 +84,7 @@ int main(int argc, char * const argv[] ) {
   opts.parse_args( argc, argv );
   string inpname = "mblem.lex";
   opts.extract( 'i', inpname );
-  ifstream bron( inpname.c_str() );
+  ifstream bron( inpname );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;
     return EXIT_FAILURE;
@@ -133,7 +133,7 @@ int main(int argc, char * const argv[] ) {
   Mblem myMblem(theErrLog);
   configuration.fill( configFileName );
   myMblem.init( configuration );
-  bron.open( inpname.c_str() );
+  bron.open( inpname );
   cout << "checking the lemmas in " << inpname << endl;
   while ( getline(bron, line ) ){
     vector<string> parts;
@@ -154,8 +154,8 @@ int main(int argc, char * const argv[] ) {
 #define LONG
 #ifdef LONG
     vector<pair<string,string> > res = myMblem.getResult();
-    for ( size_t i=0; i < res.size(); i++ ){
-      string lem = res[i].first;
+    for ( auto const r : res ){
+      string lem = r.first;
       lem = TiCC::lowercase(lem);
       if ( lem != word
 	   && !isException( lem ) ){

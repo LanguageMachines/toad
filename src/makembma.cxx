@@ -124,7 +124,7 @@ int main(int argc, char * const argv[] ) {
     return EXIT_FAILURE;
   }
 
-  ifstream bron( inpname.c_str() );
+  ifstream bron( inpname );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;
     return EXIT_FAILURE;
@@ -134,7 +134,7 @@ int main(int argc, char * const argv[] ) {
   if ( outname.empty() )
     os = &cout;
   else {
-    os = new ofstream( outname.c_str() );
+    os = new ofstream( outname );
     if ( !os ){
       cerr << "could not open output file '" << outname << "'" << endl;
       return EXIT_FAILURE;
@@ -172,8 +172,8 @@ int main(int argc, char * const argv[] ) {
 	spitOut( *os, prevword, morphemes );
       }
       prevword = word;
-      for ( size_t i=0; i < morphemes.size(); ++i ){
-	morphemes[i].clear();
+      for ( auto & m : morphemes ){
+	m.clear();
       }
     }
     for ( size_t i=0; i < parts.size(); ++i ){
