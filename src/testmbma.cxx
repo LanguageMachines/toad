@@ -64,6 +64,7 @@ void usage( ) {
   cout << "\t============= INPUT MODE (mandatory, choose one) ========================\n"
        << "\t -t <testfile>          Run mbma on this file\n"
        << "\t -c <filename>    Set configuration file (default " << configFileName << ")\n"
+       << "\t --deep-morph     Do deep morphe anlysis\n"
        << "\t============= OTHER OPTIONS ============================================\n"
        << "\t -h. give some help.\n"
        << "\t -V or --version .   Show version info.\n"
