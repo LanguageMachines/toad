@@ -82,13 +82,15 @@ void fill_lemmas( istream& is,
 		  multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& lems,
 		  const string& enc ){
   string line;
+  size_t linecount = 0;
   while ( getline( is, line ) ){
+    linecount++;
     if ( line == "<utt>" )
       continue;
     vector<string> parts;
     size_t num = TiCC::split( line, parts );
     if ( num != 3 ){
-      cerr << "wrong inputline (should be 3 parts)" << endl;
+      cerr << "wrong inputline on line " << linecount << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
