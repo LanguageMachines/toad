@@ -56,7 +56,7 @@ const string cgn_mbt_settings = "Frog.mbt.1.0.settings";
 const string cgn_tagset  = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
 const string dutch_ner_set  = "http://ilk.uvt.nl/folia/sets/frog-ner";
 
-string HARD_CODED_NER = "-e EL -p ddwdwfWawawaa -P chnppddwdwFawawaasss -O\" +vS -G -FColumns K: -a1 U: -a2 -q2 -mM -k19 -dID\" -n10 -M1000 -E ";
+string HARD_CODED_NER = "-e EL -p ddwdwfWawawaa -P chnppddwdwFawawaasss -O\" +vS -G -FColumns K: -a1 U: -a2 -q2 -mM -k19 -dID\" -n10 -M1000 -X -E";
 
 static Configuration my_config;
 static Configuration frog_config;
@@ -129,6 +129,7 @@ void create_train_file( const string& inpname,
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
 	spit_out( os, tagv, ner_tags );
+	os << line << endl;
 	blob.clear();
 	ner_tags.clear();
       }
