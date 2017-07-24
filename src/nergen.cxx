@@ -236,7 +236,6 @@ int main(int argc, char * const argv[] ) {
     exit( EXIT_FAILURE );
   }
   frog_config.clearatt( "baseName" );
-  frog_config.clearatt( "known_ners", "NER" );
   string ner_set_name = TiCC::trim( my_config.lookUp( "set", "NER" ) );
   if ( ner_set_name.empty() && !have_config ){
     ner_set_name = dutch_ner_set;
@@ -244,8 +243,8 @@ int main(int argc, char * const argv[] ) {
   if ( !ner_set_name.empty() ){
     frog_config.setatt( "set", ner_set_name, "NER" );
   }
-  frog_config.setatt( "settings", outname + ".setting", "NER" );
-  frog_config.setatt( "gazeteers", gazeteer_name, "NER" );
+  frog_config.setatt( "settings", outname + ".settings", "NER" );
+  frog_config.setatt( "known_ners", gazeteer_name, "NER" );
 
   string frog_cfg = outputdir + "frog-ner.cfg.template";
   frog_config.create_configfile( frog_cfg );
