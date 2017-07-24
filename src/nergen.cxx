@@ -46,12 +46,17 @@
 using namespace std;
 using namespace TiCC;
 
-static NERTagger myMbma(new TiCC::LogStream(cerr));
+LogStream mylog(cerr);
 
-// some defaults (for Dutch)
-const string dutch_morph_timbl_opts = "-a1 -w2 +vS";
+static NERTagger myNer(&mylog);
+MbtAPI *MyTagger = 0;
+
+// some sane defaults (for Dutch)
+const string cgn_mbt_settings = "Frog.mbt.1.0.settings";
 const string cgn_tagset  = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
 const string dutch_ner_set  = "http://ilk.uvt.nl/folia/sets/frog-ner";
+
+string HARD_CODED_NER = "-e EL -p ddwdwfWawawaa -P chnppddwdwFawawaasss -O\" +vS -G -FColumns K: -a1 U: -a2 -q2 -mM -k19 -dID\" -n10 -M1000 -E ";
 
 static Configuration my_config;
 static Configuration frog_config;
@@ -72,19 +77,79 @@ void usage(){
 }
 
 
-void fill_gazet( const string& name ){
+bool fill_gazet( const string& name ){
+  return myNer.read_gazets( name, "" );
+}
+
+void spit_out( ostream& os,
+	       const vector<Tagger::TagResult>& tagv,
+	       const vector<string>& ner_file_tags ){
+  vector<string> words;
+  vector<string> tags;
+  for( const auto& tr : tagv ){
+    words.push_back( tr.word() );
+    tags.push_back( tr.assignedTag() );
+  }
+
+  vector<string> ner_tags;
+  myNer.create_ner_list( words, ner_tags );
+  string prevP = "_";
+  string prevN = "_";
+  for ( size_t i=0; i < words.size(); ++i ){
+    string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
+    prevP = tags[i];
+    if ( i < words.size() - 1 ){
+      line += tags[i+1] + "\t";
+    }
+    else {
+      line += "_\t";
+    }
+    line += prevN + "\t" + ner_tags[i] + "\t";
+    prevN = ner_tags[i];
+    if ( i < words.size() - 1 ){
+      line += ner_tags[i+1] + "\t";
+    }
+    else {
+      line += "_\t";
+    }
+    line += ner_file_tags[i];
+    os << line << endl;
+  }
 }
 
 void create_train_file( const string& inpname,
 			const string& outname ){
-}
-
-void create_tagger( const string& outname,
-		    const string& full_treename ){
+  ofstream os( outname );
+  ifstream is( inpname );
+  string line;
+  string blob;
+  vector<string> ner_tags;
+  while ( getline( is, line ) ){
+    if ( line.empty() || line == "<utt>" ) {
+      if ( !blob.empty() ){
+	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
+	spit_out( os, tagv, ner_tags );
+	blob.clear();
+	ner_tags.clear();
+      }
+      continue;
+    }
+    vector<string> parts;
+    if ( TiCC::split( line, parts) != 2 ){
+      cerr << "DOOD: " << line << endl;
+      exit(EXIT_FAILURE);
+    }
+    blob += parts[0] + "\n";
+    ner_tags.push_back( parts[1] );
+  }
+  if ( !blob.empty() ){
+    vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
+    spit_out( os, tagv, ner_tags );
+  }
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVg","version");
+  TiCC::CL_Options opts("b:O:c:hVg:","version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -130,8 +195,24 @@ int main(int argc, char * const argv[] ) {
       base_name = "nergen";
     }
   }
-  if ( !opts.extract( 'g', gazeteer_name ) ){
-    fill_gazet( gazeteer_name );
+  if ( opts.extract( 'g', gazeteer_name ) ){
+    cout << "GAZET: " << gazeteer_name << endl;
+    if ( !fill_gazet( gazeteer_name ) ){
+      exit( EXIT_FAILURE );
+    }
+  }
+  else {
+    cerr << "missing gazeteer option (-g)" << endl;
+    exit(EXIT_FAILURE);
+  }
+  string mbt_setting = TiCC::trim( my_config.lookUp( "settings", "tagger" ), " \"" );
+  if ( mbt_setting.empty() ){
+    mbt_setting = cgn_mbt_settings;
+  }
+  mbt_setting = "-s " + my_config.configDir() + mbt_setting + " -vcf" ;
+  MyTagger = new MbtAPI( mbt_setting, mylog );
+  if ( !MyTagger->isInit() ){
+    exit( EXIT_FAILURE );
   }
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
@@ -149,24 +230,24 @@ int main(int argc, char * const argv[] ) {
   }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
-  string treename = TiCC::trim( my_config.lookUp( "treeFile", "ner" ) );
-  if ( treename.empty() ){
-    treename = base_name + ".tree";
-  }
-  frog_config.setatt( "treeFile", treename, "mbma" );
-  string full_treename = outputdir + treename;
   create_train_file( inpname, outname );
-  create_tagger( outname, full_treename );
-
+  string ner_setting = HARD_CODED_NER + outname;
+  if ( !myNer.Generate( ner_setting ) ){
+    exit( EXIT_FAILURE );
+  }
   frog_config.clearatt( "baseName" );
-  string ner_set_name = TiCC::trim( my_config.lookUp( "set", "ner" ) );
+  frog_config.clearatt( "known_ners", "NER" );
+  string ner_set_name = TiCC::trim( my_config.lookUp( "set", "NER" ) );
   if ( ner_set_name.empty() && !have_config ){
     ner_set_name = dutch_ner_set;
   }
   if ( !ner_set_name.empty() ){
-    frog_config.setatt( "set", ner_set_name, "ner" );
+    frog_config.setatt( "set", ner_set_name, "NER" );
   }
-  string frog_cfg = outputdir + "frog.cfg.template";
+  frog_config.setatt( "settings", outname + ".setting", "NER" );
+  frog_config.setatt( "gazeteers", gazeteer_name, "NER" );
+
+  string frog_cfg = outputdir + "frog-ner.cfg.template";
   frog_config.create_configfile( frog_cfg );
   cout << "stored a frog configfile template: " << frog_cfg << endl;
   return EXIT_SUCCESS;
