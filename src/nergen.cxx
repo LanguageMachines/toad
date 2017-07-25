@@ -259,7 +259,7 @@ int main(int argc, char * const argv[] ) {
   }
   string N_opt = TiCC::trim( my_config.lookUp( "n", "NER" ), " \"" );
   string taggercommand = "-E " + outname
-    + " -s " + base_name + ".settings"
+    + " -s " + outname + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt;
