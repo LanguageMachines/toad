@@ -51,12 +51,18 @@ LogStream mylog(cerr);
 static NERTagger myNer(&mylog);
 MbtAPI *MyTagger = 0;
 
+string EOS_MARK = "\n";
+
 // some sane defaults (for Dutch)
 const string cgn_mbt_settings = "Frog.mbt.1.0.settings";
 const string cgn_tagset  = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
 const string dutch_ner_set  = "http://ilk.uvt.nl/folia/sets/frog-ner";
 
-string HARD_CODED_NER = "-e EL -p ddwdwfWawawaa -P chnppddwdwFawawaasss -O\" +vS -G -FColumns K: -a1 U: -a2 -q2 -mM -k19 -dID\" -n10 -M1000 -X -E";
+const string ner_p_pat = "ddwdwfWawawaa";
+const string ner_P_pat = "chnppddwdwFawawaasss";
+const string ner_TimblOpts = "+vS -G -FColumns K: -a1 U: -a2 -q2 -mM -k19 -dID";
+const string ner_n_opt = "10";
+const string ner_M_opt = "-M1000";
 
 static Configuration my_config;
 static Configuration frog_config;
@@ -125,11 +131,15 @@ void create_train_file( const string& inpname,
   string blob;
   vector<string> ner_tags;
   while ( getline( is, line ) ){
-    if ( line.empty() || line == "<utt>" ) {
+    if ( line == "<utt>" ){
+      EOS_MARK = "<utt>";
+      line.clear();
+    }
+    if ( line.empty() ) {
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
 	spit_out( os, tagv, ner_tags );
-	os << line << endl;
+	os << EOS_MARK << endl;
 	blob.clear();
 	ner_tags.clear();
       }
@@ -197,7 +207,6 @@ int main(int argc, char * const argv[] ) {
     }
   }
   if ( opts.extract( 'g', gazeteer_name ) ){
-    cout << "GAZET: " << gazeteer_name << endl;
     if ( !fill_gazet( gazeteer_name ) ){
       exit( EXIT_FAILURE );
     }
@@ -224,19 +233,59 @@ int main(int argc, char * const argv[] ) {
     cerr << "only 1 inputfile is allowed" << endl;
     exit(EXIT_FAILURE);
   }
+  string inpname = names[0];
+  string outname = outputdir + base_name + ".data";
+
+  cout << "Start converting: " << inpname << endl;
+  create_train_file( inpname, outname );
+  cout << "Created a trainingfile: " << outname << endl;
+
+  string p_pat = TiCC::trim( my_config.lookUp( "p", "NER" ), " \"" );
+  if ( p_pat.empty() ){
+    p_pat = ner_p_pat;
+  }
+  string P_pat = TiCC::trim( my_config.lookUp( "P", "NER" ), " \"" );
+  if ( P_pat.empty() ){
+    P_pat = ner_P_pat;
+  }
+  string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "NER" )
+				 , " \"" );
+  if ( timblopts.empty() ){
+    timblopts = ner_TimblOpts;
+  }
+  string M_opt = TiCC::trim( my_config.lookUp( "M", "NER" ), " \"" );
+  if ( M_opt.empty() ){
+    M_opt = ner_M_opt;
+  }
+  string N_opt = TiCC::trim( my_config.lookUp( "n", "NER" ), " \"" );
+  string taggercommand = "-E " + outname
+    + " -s " + base_name + ".settings"
+    + " -p " + p_pat + " -P " + P_pat
+    + " -O\""+ timblopts + "\""
+    + " -M " + M_opt;
+  if ( !N_opt.empty() ){
+    taggercommand += " -n " + N_opt;
+  }
+  if ( EOS_MARK != "<utt>" ){
+    taggercommand += " -eEL";
+  }
+  taggercommand += " -DLogSilent"; // shut up
+  cout << "start tagger: " << taggercommand << endl;
+  cout << "this may take several minutes, depending on the corpus size."
+       << endl;
+  MbtAPI::GenerateTagger( taggercommand );
+  cout << "finished tagger" << endl;
   frog_config = my_config;
+  frog_config.clearatt( "p", "NER" );
+  frog_config.clearatt( "P", "NER" );
+  frog_config.clearatt( "timblOpts", "NER" );
+  frog_config.clearatt( "M", "NER" );
+  frog_config.clearatt( "n", "NER" );
+  frog_config.clearatt( "baseName" );
   frog_config.clearatt( "configDir", "global" );
   if ( !outputdir.empty() ){
     frog_config.setatt( "configDir", outputdir, "global" );
   }
-  string inpname = names[0];
-  string outname = outputdir + base_name + ".data";
-  create_train_file( inpname, outname );
-  string ner_setting = HARD_CODED_NER + outname;
-  if ( !myNer.Generate( ner_setting ) ){
-    exit( EXIT_FAILURE );
-  }
-  frog_config.clearatt( "baseName" );
   string ner_set_name = TiCC::trim( my_config.lookUp( "set", "NER" ) );
   if ( ner_set_name.empty() && !have_config ){
     ner_set_name = dutch_ner_set;
