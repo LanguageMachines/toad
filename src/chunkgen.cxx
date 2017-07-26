@@ -59,7 +59,7 @@ const string dutch_chunk_set  = "http://ilk.uvt.nl/folia/sets/frog-chunker-nl";
 
 const string chunk_p_pat = "dddwfWawa";
 const string chunk_P_pat = "chnppddwFawsss";
-const string chunk_TimblOpts = "+vS -G0 +D K: -a IGtree -w gr U: -a IB1 -mM -k19 -L 2 -K 5 -w gr -dID";
+const string chunk_TimblOpts = "+vS -G0 +D K: -a IGtree -w gr U: -a IB1 -mM -L 2 -K 5 -w gr -dID";
 const string chunk_n_opt = "10";
 const string chunk_M_opt = "-M1000";
 
