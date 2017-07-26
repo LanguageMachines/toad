@@ -84,7 +84,9 @@ void usage(){
 
 
 bool fill_gazet( const string& name ){
-  return myNer.read_gazets( name, "" );
+  string file = TiCC::basename( name );
+  string dir = TiCC::dirname( name );
+  return myNer.read_gazets( file, dir );
 }
 
 void spit_out( ostream& os,
@@ -160,7 +162,7 @@ void create_train_file( const string& inpname,
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVg:","version");
+  TiCC::CL_Options opts("b:O:c:hVg:X","version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -191,6 +193,7 @@ int main(int argc, char * const argv[] ) {
     have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
+  bool keepX = opts.extract( 'X' );
   opts.extract( 'O', outputdir );
   if ( !outputdir.empty() ){
     if ( outputdir[outputdir.length()-1] != '/' )
@@ -268,6 +271,9 @@ int main(int argc, char * const argv[] ) {
   }
   if ( EOS_MARK != "<utt>" ){
     taggercommand += " -eEL";
+  }
+  if ( keepX ){
+    taggercommand += " -X";
   }
   taggercommand += " -DLogSilent"; // shut up
   cout << "start tagger: " << taggercommand << endl;
