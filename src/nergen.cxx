@@ -132,6 +132,7 @@ void create_train_file( const string& inpname,
   string line;
   string blob;
   vector<string> ner_tags;
+  size_t HeartBeat=0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
       EOS_MARK = "<utt>";
@@ -142,6 +143,13 @@ void create_train_file( const string& inpname,
 	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
 	spit_out( os, tagv, ner_tags );
 	os << EOS_MARK << endl;
+	if ( ++HeartBeat % 8000 == 0 ) {
+	  cout << endl;
+	}
+	if ( HeartBeat % 100 == 0 ) {
+	  cout << ".";
+	  cout.flush();
+	}
 	blob.clear();
 	ner_tags.clear();
       }
@@ -218,6 +226,9 @@ int main(int argc, char * const argv[] ) {
     cerr << "missing gazeteer option (-g)" << endl;
     exit(EXIT_FAILURE);
   }
+  if ( have_config ){
+    myNer.init( my_config );
+  }
   string mbt_setting = TiCC::trim( my_config.lookUp( "settings", "tagger" ), " \"" );
   if ( mbt_setting.empty() ){
     mbt_setting = cgn_mbt_settings;
@@ -239,7 +250,8 @@ int main(int argc, char * const argv[] ) {
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
 
-  cout << "Start converting: " << inpname << endl;
+  cout << "Start converting: " << inpname
+       << " (every dot represents 100 sentences)" << endl;
   create_train_file( inpname, outname );
   cout << "Created a trainingfile: " << outname << endl;
 
