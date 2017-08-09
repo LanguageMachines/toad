@@ -81,7 +81,14 @@ bool isException( const string& s ){
 
 int main(int argc, char * const argv[] ) {
   TiCC::CL_Options opts("i:","");
-  opts.parse_args( argc, argv );
+  try {
+    opts.parse_args( argc, argv );
+  }
+  catch ( TiCC::OptionError& e ){
+    cerr << e.what() << endl;
+    usage();
+    return EXIT_FAILURE;
+  }
   string inpname = "mblem.lex";
   opts.extract( 'i', inpname );
   ifstream bron( inpname );
