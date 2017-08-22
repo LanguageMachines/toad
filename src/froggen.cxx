@@ -56,7 +56,7 @@ const string dutch_p_pat = "dddwfWawa";
 const string dutch_P_pat = "chnppdddwFawasss";
 const string dutch_timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
 const string dutch_M_opt = "500";
-const string dutch_lemma_timbl_opts = "-a1 -w2 +vS";
+const string dutch_lemma_timbl_opts = "-a1 -w2 +vS -F tabbed";
 const string dutch_mblem_set = "http://ilk.uvt.nl/folia/sets/frog-mblem-nl";
 const string dutch_tagger_set = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
 
@@ -88,7 +88,8 @@ void fill_lemmas( istream& is,
     if ( line == "<utt>" )
       continue;
     vector<string> parts;
-    size_t num = TiCC::split( line, parts );
+    size_t num = TiCC::split_at( line, parts, "\t" );
+    // tabs as separator, embedded space in words are allowed
     if ( num != 3 ){
       cerr << "wrong inputline on line " << linecount << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
@@ -150,7 +151,8 @@ void create_tagger( const string& base_name, const string& corpus_name ){
     }
     else {
       vector<string> parts;
-      size_t num = TiCC::split( line, parts );
+      size_t num = TiCC::split_at( line, parts, "\t" );
+      // tabs as separator, embedded space in words are allowed
       if ( num == 3 ){
 	os << parts[0] << "\t" << parts[2] << endl;
       }
@@ -247,11 +249,11 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
     for ( int i=0; i<HISTORY; i++) {
       int j= wordform.length()-HISTORY+i;
       if (j<0)
-	instance += "= ";
+	instance += "=\t";
       else {
 	UChar uc = wordform[j];
 	instance += uc;
-	instance += " ";
+	instance += "\t";
       }
     }
     if ( safeInstance.isEmpty() ){
