@@ -152,7 +152,7 @@ int main( int argc, char * const argv[] ) {
   if ( doTrans ){
     vector<string> parts;
     while ( getline( tf, line ) ){
-      int num = split( line, parts, " \t" );
+      int num = split( line, parts, "\t" );
       if ( num == 2 ){
 	classes.push_back( UTF8ToUnicode( parts[0] ) );
 	classcodes.push_back( UTF8ToUnicode( parts[1] ) );
@@ -169,7 +169,7 @@ int main( int argc, char * const argv[] ) {
 
   while ( getline(bron, line ) ){
     vector<string>parts;
-    int num = split( line, parts, " \t" );
+    int num = split( line, parts, "\t" );
     if ( num == 3 ){
       wordform = UTF8ToUnicode( parts[0] );
       lemma = UTF8ToUnicode( parts[1] );
@@ -260,11 +260,11 @@ int main( int argc, char * const argv[] ) {
     for ( int i=0; i<HISTORY; i++) {
       int j= memwordform.length()-HISTORY+i;
       if (j<0)
-	instance += "= ";
+	instance += "=\t";
       else {
 	UChar uc = memwordform[j];
 	instance += uc;
-	instance += " ";
+	instance += "\t";
       }
     }
     if ( instance != lastinstance ){
