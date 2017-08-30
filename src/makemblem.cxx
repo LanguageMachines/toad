@@ -89,15 +89,22 @@ int main( int argc, char * const argv[] ) {
   string transname;
   string outname = "mblem.data";
   int opt;
-  while ( (opt = getopt( argc, argv, "o:i:t:")) != -1 ){
+  bool I_AM_SURE = false;
+  while ( (opt = getopt( argc, argv, "o:i:t:Y")) != -1 ){
     switch ( opt ){
     case 'i': inpname = optarg; break;
     case 'o': outname = optarg; break;
     case 't': transname = optarg; break;
+    case 'Y': I_AM_SURE = true; break;
     default: usage(); return EXIT_FAILURE;
     }
   }
 
+  if ( !I_AM_SURE ){
+    cerr << "this is a very old program. use 'froggen' instead, please" << endl;
+    cerr << "or add -Y to the commandline, if you are really really sure" << endl;
+    return EXIT_FAILURE;
+  }
   if ( inpname == outname ){
     cerr << "input file and outputfile cannot have the same name!" << endl;
     return EXIT_FAILURE;
@@ -162,7 +169,7 @@ int main( int argc, char * const argv[] ) {
 
   while ( getline(bron, line ) ){
     vector<string>parts;
-    int num = split( line, parts, " " );
+    int num = split( line, parts, " \t" );
     if ( num == 3 ){
       wordform = UTF8ToUnicode( parts[0] );
       lemma = UTF8ToUnicode( parts[1] );
