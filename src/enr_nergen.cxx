@@ -40,7 +40,7 @@
 #include "ucto/tokenize.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
-#include "frog/ner_tagger_mod.h"
+#include "frog/enr_ner_tagger_mod.h"
 #include "config.h"
 
 using namespace std;
@@ -48,7 +48,7 @@ using namespace TiCC;
 
 LogStream mylog(cerr);
 
-static NERTagger myNer(&mylog);
+static ENERTagger myNer(&mylog);
 MbtAPI *MyTagger = 0;
 
 string EOS_MARK = "\n";
