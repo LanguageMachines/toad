@@ -272,7 +272,7 @@ int main(int argc, char * const argv[] ) {
     frog_config.setatt( "set", chunk_set_name, "IOB" );
   }
   frog_config.setatt( "settings", outname + ".settings", "IOB" );
-
+  frog_config.setatt( "version", "2.0", "IOB" );
   string frog_cfg = outputdir + "frog-chunker.cfg.template";
   frog_config.create_configfile( frog_cfg );
   cout << "stored a frog configfile template: " << frog_cfg << endl;

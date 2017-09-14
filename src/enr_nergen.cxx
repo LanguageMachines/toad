@@ -313,6 +313,7 @@ int main(int argc, char * const argv[] ) {
   }
   frog_config.setatt( "settings", outname + ".settings", "NER" );
   frog_config.setatt( "known_ners", gazeteer_name, "NER" );
+  frog_config.setatt( "version", "2.0", "NER" );
 
   string frog_cfg = outputdir + "frog-ner.cfg.template";
   frog_config.create_configfile( frog_cfg );
