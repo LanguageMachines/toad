@@ -123,6 +123,13 @@ void spit_out( ostream& os,
     line += ner_file_tags[i];
     os << line << endl;
   }
+  if ( EOS_MARK == "\n" ){
+    // avoid spurious newlines!
+    os << endl;
+  }
+  else {
+    os << EOS_MARK << endl;
+  }
 }
 
 void create_train_file( const string& inpname,
@@ -142,7 +149,6 @@ void create_train_file( const string& inpname,
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
 	spit_out( os, tagv, ner_tags );
-	os << EOS_MARK << endl;
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
 	}
