@@ -113,8 +113,7 @@ void spit_out( ostream& os,
     tags.push_back( tr.assignedTag() );
   }
 
-  vector<string> ner_tags;
-  myNer.create_ner_list( words, ner_tags );
+  vector<string> ner_tags = myNer.create_ner_list( words );
   string prevP = "_";
   string prevN = "_";
   for ( size_t i=0; i < words.size(); ++i ){
