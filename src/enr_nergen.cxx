@@ -328,6 +328,7 @@ int main(int argc, char * const argv[] ) {
   frog_config.clearatt( "M", "NER" );
   frog_config.clearatt( "n", "NER" );
   frog_config.clearatt( "baseName" );
+  frog_config.clearatt( "%", "NER" );
   frog_config.clearatt( "configDir", "global" );
   if ( !outputdir.empty() ){
     frog_config.setatt( "configDir", outputdir, "global" );
