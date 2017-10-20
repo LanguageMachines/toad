@@ -48,23 +48,35 @@ using namespace TiCC;
 
 LogStream mylog(cerr);
 
-static IOBTagger myChunker(&mylog);
 MbtAPI *MyTagger = 0;
 
 string EOS_MARK = "\n";
 
-// some sane defaults (for Dutch)
-const string cgn_mbt_settings = "Frog.mbt.1.0.settings";
-const string dutch_chunk_set  = "http://ilk.uvt.nl/folia/sets/frog-chunker-nl";
-
-const string chunk_p_pat = "dddwfWawa";
-const string chunk_P_pat = "chnppddwFawsss";
-const string chunk_TimblOpts = "+vS -G0 +D K: -a IGtree -w gr U: -a IB1 -mM -L 2 -K 5 -w gr -dID";
-const string chunk_n_opt = "10";
-const string chunk_M_opt = "-M1000";
-
 static Configuration my_config;
 static Configuration frog_config;
+
+void set_default_config(){
+  my_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
+  my_config.setatt( "baseName", "chunkgen", "global" );
+  my_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
+  my_config.setatt( "p", "dddwfWawa", "IOB" );
+  my_config.setatt( "P", "chnppddwFawasss", "IOB" );
+  my_config.setatt( "n", "10", "IOB" );
+  my_config.setatt( "M", "200", "IOB" );
+  my_config.setatt( "%", "5", "IOB" );
+  my_config.setatt( "timblOpts",
+		    "+vS -FColumns K: -a4 -mM -k5 -dID U: -a0 -mM -k19 -dID",
+		    "IOB" );
+  my_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-chunker-nl", "IOB" );
+}
+
+class setting_error: public std::runtime_error {
+public:
+  setting_error( const string& key, const string& mod ):
+    std::runtime_error( "missing key: '" + key + "' for module: '" + mod + "'" )
+  {};
+};
+
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -151,7 +163,6 @@ int main(int argc, char * const argv[] ) {
     cerr << e.what() << endl;
     exit(EXIT_FAILURE);
   }
-  bool have_config=false;
   string outputdir;
   string configfile;
   string base_name;
@@ -170,8 +181,10 @@ int main(int argc, char * const argv[] ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
-    have_config = true;
     cout << "using configuration: " << configfile << endl;
+  }
+  else {
+    set_default_config();
   }
   bool keepX = opts.extract( 'X' );
   opts.extract( 'O', outputdir );
@@ -192,7 +205,7 @@ int main(int argc, char * const argv[] ) {
 
   string mbt_setting = TiCC::trim( my_config.lookUp( "settings", "tagger" ), " \"" );
   if ( mbt_setting.empty() ){
-    mbt_setting = cgn_mbt_settings;
+    throw setting_error( "settings", "tagger" );
   }
   mbt_setting = "-s " + my_config.configDir() + mbt_setting + " -vcf" ;
   MyTagger = new MbtAPI( mbt_setting, mylog );
@@ -217,30 +230,36 @@ int main(int argc, char * const argv[] ) {
 
   string p_pat = TiCC::trim( my_config.lookUp( "p", "IOB" ), " \"" );
   if ( p_pat.empty() ){
-    p_pat = chunk_p_pat;
+   throw setting_error( "p", "IOB" );
   }
   string P_pat = TiCC::trim( my_config.lookUp( "P", "IOB" ), " \"" );
   if ( P_pat.empty() ){
-    P_pat = chunk_P_pat;
+   throw setting_error( "P", "IOB" );
   }
   string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "IOB" )
 				 , " \"" );
   if ( timblopts.empty() ){
-    timblopts = chunk_TimblOpts;
+   throw setting_error( "timblOpts", "IOB" );
   }
   string M_opt = TiCC::trim( my_config.lookUp( "M", "IOB" ), " \"" );
   if ( M_opt.empty() ){
-    M_opt = chunk_M_opt;
+   throw setting_error( "M", "IOB" );
   }
-  string N_opt = TiCC::trim( my_config.lookUp( "n", "IOB" ), " \"" );
+  string n_opt = TiCC::trim( my_config.lookUp( "n", "IOB" ), " \"" );
+  if ( n_opt.empty() ){
+   throw setting_error( "n", "IOB" );
+  }
+  string perc_opt = TiCC::trim( my_config.lookUp( "%", "IOB" ), " \"" );
+  if ( perc_opt.empty() ){
+   throw setting_error( "%", "IOB" );
+  }
   string taggercommand = "-E " + outname
     + " -s " + outname + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
-    + " -M " + M_opt;
-  if ( !N_opt.empty() ){
-    taggercommand += " -n " + N_opt;
-  }
+    + " -M " + M_opt
+    + " -n " + n_opt
+    + " -% " + perc_opt;
   if ( EOS_MARK != "<utt>" ){
     taggercommand += " -eEL";
   }
@@ -259,17 +278,15 @@ int main(int argc, char * const argv[] ) {
   frog_config.clearatt( "timblOpts", "IOB" );
   frog_config.clearatt( "M", "IOB" );
   frog_config.clearatt( "n", "IOB" );
+  frog_config.clearatt( "%", "IOB" );
   frog_config.clearatt( "baseName" );
   frog_config.clearatt( "configDir", "global" );
   if ( !outputdir.empty() ){
     frog_config.setatt( "configDir", outputdir, "global" );
   }
   string chunk_set_name = TiCC::trim( my_config.lookUp( "set", "IOB" ) );
-  if ( chunk_set_name.empty() && !have_config ){
-    chunk_set_name = dutch_chunk_set;
-  }
-  if ( !chunk_set_name.empty() ){
-    frog_config.setatt( "set", chunk_set_name, "IOB" );
+  if ( chunk_set_name.empty() ){
+    throw setting_error( "set", "IOB" );
   }
   frog_config.setatt( "settings", outname + ".settings", "IOB" );
   frog_config.setatt( "version", "2.0", "IOB" );
