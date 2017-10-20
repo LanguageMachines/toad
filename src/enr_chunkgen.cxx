@@ -65,7 +65,7 @@ void set_default_config(){
   my_config.setatt( "M", "200", "IOB" );
   my_config.setatt( "%", "5", "IOB" );
   my_config.setatt( "timblOpts",
-		    "+vS -FColumns K: -a4 -mM -k5 -dID U: -a0 -mM -k19 -dID",
+		    "+vS -G -FColumns K: -a4 -mM -k5 -dID U: -a0 -mM -k19 -dID",
 		    "IOB" );
   my_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-chunker-nl", "IOB" );
 }
