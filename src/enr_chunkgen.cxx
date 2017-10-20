@@ -146,7 +146,12 @@ void create_train_file( const string& inpname,
       exit(EXIT_FAILURE);
     }
     blob += parts[0] + "\n";
-    chunk_tags.push_back( parts[1] );
+    vector<string> pv = TiCC::split_at( parts[1], "_" );
+    if ( pv.size() != 2 ){
+      cerr << "DOOD: " << parts[1] << endl;
+      exit(EXIT_FAILURE);
+    }
+    chunk_tags.push_back( pv[1] );
   }
   if ( !blob.empty() ){
     vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
