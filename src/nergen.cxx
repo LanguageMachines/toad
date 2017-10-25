@@ -49,7 +49,7 @@ using namespace TiCC;
 
 LogStream mylog(cerr);
 
-static ENERTagger myNer(&mylog);
+static NERTagger myNer(&mylog);
 
 string EOS_MARK = "\n";
 

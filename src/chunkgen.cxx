@@ -40,7 +40,6 @@
 #include "ucto/tokenize.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
-#include "frog/iob_tagger_mod.h"
 #include "config.h"
 
 using namespace std;
