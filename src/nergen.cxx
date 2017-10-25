@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <exception>
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
@@ -40,7 +41,7 @@
 #include "ucto/tokenize.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
-#include "frog/iob_tagger_mod.h"
+#include "frog/ner_tagger_mod.h"
 #include "config.h"
 
 using namespace std;
@@ -48,7 +49,7 @@ using namespace TiCC;
 
 LogStream mylog(cerr);
 
-MbtAPI *MyTagger = 0;
+static ENERTagger myNer(&mylog);
 
 string EOS_MARK = "\n";
 
@@ -57,17 +58,19 @@ static Configuration frog_config;
 
 void set_default_config(){
   my_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
-  my_config.setatt( "baseName", "chunkgen", "global" );
+  my_config.setatt( "baseName", "nergen", "global" );
   my_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
-  my_config.setatt( "p", "dddwfWawa", "IOB" );
-  my_config.setatt( "P", "chnppddwFawasss", "IOB" );
-  my_config.setatt( "n", "10", "IOB" );
-  my_config.setatt( "M", "200", "IOB" );
-  my_config.setatt( "%", "5", "IOB" );
+  my_config.setatt( "p", "ddwdwfWawaa", "NER" );
+  my_config.setatt( "P", "chnppddwdwFawawasss", "NER" );
+  my_config.setatt( "n", "10", "NER" );
+  my_config.setatt( "M", "1000", "NER" );
+  my_config.setatt( "%", "5", "NER" );
   my_config.setatt( "timblOpts",
-		    "+vS -G -FColumns K: -a4 -mM -k5 -dID U: -a0 -mM -k19 -dID",
-		    "IOB" );
-  my_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-chunker-nl", "IOB" );
+		    "+vS -G -FColumns K: -a4 U: -a2 -q2 -mM -k11 -dID",
+		    "NER" );
+  my_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-ner-nl", "NER" );
+  my_config.setatt( "max_ner_size", "15", "NER" );
+
 }
 
 class setting_error: public std::runtime_error {
@@ -76,7 +79,6 @@ public:
     std::runtime_error( "missing key: '" + key + "' for module: '" + mod + "'" )
   {};
 };
-
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -89,21 +91,30 @@ string UnicodeToUTF8( const UnicodeString& s ){
 }
 
 void usage(){
-  cerr << "chunkgen [-c configfile] [-O outputdir] inputfile"
+  cerr << "nergen [-c configfile] [-O outputdir] [-g gazeteerfile] inputfile"
        << endl;
 }
 
 
+bool fill_gazet( const string& name ){
+  string file = TiCC::basename( name );
+  string dir = TiCC::dirname( name );
+  return myNer.read_gazets( file, dir );
+}
+
 void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
-	       const vector<string>& chunk_file_tags ){
+	       const vector<string>& ner_file_tags ){
   vector<string> words;
   vector<string> tags;
   for( const auto& tr : tagv ){
     words.push_back( tr.word() );
     tags.push_back( tr.assignedTag() );
   }
+
+  vector<string> ner_tags = myNer.create_ner_list( words );
   string prevP = "_";
+  string prevN = "_";
   for ( size_t i=0; i < words.size(); ++i ){
     string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
     prevP = tags[i];
@@ -113,18 +124,35 @@ void spit_out( ostream& os,
     else {
       line += "_\t";
     }
-    line += chunk_file_tags[i];
+    line += prevN + "\t" + ner_tags[i] + "\t";
+    prevN = ner_tags[i];
+    if ( i < words.size() - 1 ){
+      line += ner_tags[i+1] + "\t";
+    }
+    else {
+      line += "_\t";
+    }
+    line += ner_file_tags[i];
     os << line << endl;
+  }
+  if ( EOS_MARK == "\n" ){
+    // avoid spurious newlines!
+    os << endl;
+  }
+  else {
+    os << EOS_MARK << endl;
   }
 }
 
-void create_train_file( const string& inpname,
+void create_train_file( MbtAPI *tagger,
+			const string& inpname,
 			const string& outname ){
   ofstream os( outname );
   ifstream is( inpname );
   string line;
   string blob;
-  vector<string> chunk_tags;
+  vector<string> ner_tags;
+  size_t HeartBeat=0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
       EOS_MARK = "<utt>";
@@ -132,11 +160,17 @@ void create_train_file( const string& inpname,
     }
     if ( line.empty() ) {
       if ( !blob.empty() ){
-	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
-	spit_out( os, tagv, chunk_tags );
-	os << EOS_MARK << endl;
+	vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
+	spit_out( os, tagv, ner_tags );
+	if ( ++HeartBeat % 8000 == 0 ) {
+	  cout << endl;
+	}
+	if ( HeartBeat % 100 == 0 ) {
+	  cout << ".";
+	  cout.flush();
+	}
 	blob.clear();
-	chunk_tags.clear();
+	ner_tags.clear();
       }
       continue;
     }
@@ -146,21 +180,16 @@ void create_train_file( const string& inpname,
       exit(EXIT_FAILURE);
     }
     blob += parts[0] + "\n";
-    vector<string> pv = TiCC::split_at( parts[1], "_" );
-    if ( pv.size() != 2 ){
-      cerr << "DOOD: " << parts[1] << endl;
-      exit(EXIT_FAILURE);
-    }
-    chunk_tags.push_back( pv[1] );
+    ner_tags.push_back( parts[1] );
   }
   if ( !blob.empty() ){
-    vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
-    spit_out( os, tagv, chunk_tags );
+    vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
+    spit_out( os, tagv, ner_tags );
   }
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVX","version");
+  TiCC::CL_Options opts("b:O:c:hVg:X","version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -168,9 +197,11 @@ int main(int argc, char * const argv[] ) {
     cerr << e.what() << endl;
     exit(EXIT_FAILURE);
   }
+  bool have_config=false;
   string outputdir;
   string configfile;
   string base_name;
+  string gazeteer_name;
   if ( opts.extract( 'h' ) ){
     usage();
     exit( EXIT_SUCCESS );
@@ -186,6 +217,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
+    have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
   else {
@@ -202,20 +234,53 @@ int main(int argc, char * const argv[] ) {
     }
   }
   if ( !opts.extract( 'b', base_name ) ){
-    base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
+    base_name = my_config.lookUp( "baseName" );
     if ( base_name.empty() ){
-      base_name = "chunkgen";
+      base_name = "nergen";
     }
   }
-
-  string mbt_setting = TiCC::trim( my_config.lookUp( "settings", "tagger" ), " \"" );
-  if ( mbt_setting.empty() ){
-    throw setting_error( "settings", "tagger" );
+  if ( opts.extract( 'g', gazeteer_name ) ){
+    if ( !fill_gazet( gazeteer_name ) ){
+      exit( EXIT_FAILURE );
+    }
   }
-  mbt_setting = "-s " + my_config.configDir() + mbt_setting + " -vcf" ;
-  MyTagger = new MbtAPI( mbt_setting, mylog );
-  if ( !MyTagger->isInit() ){
-    exit( EXIT_FAILURE );
+  else {
+    cerr << "missing gazeteer option (-g)" << endl;
+    exit(EXIT_FAILURE);
+  }
+  if ( have_config ){
+    myNer.init( my_config );
+  }
+
+  // first check if all required options are present in the config
+  //
+  string ner_set_name = my_config.lookUp( "set", "NER" );
+  if ( ner_set_name.empty() ){
+    throw setting_error( "set", "NER" );
+  }
+  string p_pat = my_config.lookUp( "p", "NER" );
+  if ( p_pat.empty() ){
+    throw setting_error( "p", "NER" );
+  }
+  string P_pat = my_config.lookUp( "P", "NER" );
+  if ( P_pat.empty() ){
+    throw setting_error( "P", "NER" );
+  }
+  string timblopts = my_config.lookUp( "timblOpts", "NER" );
+  if ( timblopts.empty() ){
+    throw setting_error( "timblOpts", "NER" );
+  }
+  string M_opt = my_config.lookUp( "M", "NER" );
+  if ( M_opt.empty() ){
+    throw setting_error( "M", "NER" );
+  }
+  string n_opt = my_config.lookUp( "n", "NER" );
+  if ( n_opt.empty() ){
+    throw setting_error( "n", "NER" );
+  }
+  string perc_opt = my_config.lookUp( "%", "NER" );
+  if ( perc_opt.empty() ){
+    throw setting_error( "%", "NER" );
   }
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
@@ -226,38 +291,23 @@ int main(int argc, char * const argv[] ) {
     cerr << "only 1 inputfile is allowed" << endl;
     exit(EXIT_FAILURE);
   }
+  string mbt_setting = my_config.lookUp( "settings", "tagger" );
+  if ( mbt_setting.empty() ){
+    throw setting_error( "settings", "tagger" );
+  }
+  mbt_setting = "-s " + my_config.configDir() + mbt_setting + " -vcf" ;
+  MbtAPI *PosTagger = new MbtAPI( mbt_setting, mylog );
+  if ( !PosTagger->isInit() ){
+    exit( EXIT_FAILURE );
+  }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
 
-  cout << "Start converting: " << inpname << endl;
-  create_train_file( inpname, outname );
-  cout << "Created a trainingfile: " << outname << endl;
+  cout << "Start enriching: " << inpname << " with POS tags"
+       << " (every dot represents 100 tagged sentences)" << endl;
+  create_train_file( PosTagger, inpname, outname );
+  cout << endl << "Created a trainingfile: " << outname << endl;
 
-  string p_pat = TiCC::trim( my_config.lookUp( "p", "IOB" ), " \"" );
-  if ( p_pat.empty() ){
-   throw setting_error( "p", "IOB" );
-  }
-  string P_pat = TiCC::trim( my_config.lookUp( "P", "IOB" ), " \"" );
-  if ( P_pat.empty() ){
-   throw setting_error( "P", "IOB" );
-  }
-  string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "IOB" )
-				 , " \"" );
-  if ( timblopts.empty() ){
-   throw setting_error( "timblOpts", "IOB" );
-  }
-  string M_opt = TiCC::trim( my_config.lookUp( "M", "IOB" ), " \"" );
-  if ( M_opt.empty() ){
-   throw setting_error( "M", "IOB" );
-  }
-  string n_opt = TiCC::trim( my_config.lookUp( "n", "IOB" ), " \"" );
-  if ( n_opt.empty() ){
-   throw setting_error( "n", "IOB" );
-  }
-  string perc_opt = TiCC::trim( my_config.lookUp( "%", "IOB" ), " \"" );
-  if ( perc_opt.empty() ){
-   throw setting_error( "%", "IOB" );
-  }
   string taggercommand = "-E " + outname
     + " -s " + outname + ".settings"
     + " -p " + p_pat + " -P " + P_pat
@@ -278,24 +328,22 @@ int main(int argc, char * const argv[] ) {
   MbtAPI::GenerateTagger( taggercommand );
   cout << "finished tagger" << endl;
   frog_config = my_config;
-  frog_config.clearatt( "p", "IOB" );
-  frog_config.clearatt( "P", "IOB" );
-  frog_config.clearatt( "timblOpts", "IOB" );
-  frog_config.clearatt( "M", "IOB" );
-  frog_config.clearatt( "n", "IOB" );
-  frog_config.clearatt( "%", "IOB" );
+  frog_config.clearatt( "p", "NER" );
+  frog_config.clearatt( "P", "NER" );
+  frog_config.clearatt( "timblOpts", "NER" );
+  frog_config.clearatt( "M", "NER" );
+  frog_config.clearatt( "n", "NER" );
   frog_config.clearatt( "baseName" );
+  frog_config.clearatt( "%", "NER" );
   frog_config.clearatt( "configDir", "global" );
   if ( !outputdir.empty() ){
     frog_config.setatt( "configDir", outputdir, "global" );
   }
-  string chunk_set_name = TiCC::trim( my_config.lookUp( "set", "IOB" ) );
-  if ( chunk_set_name.empty() ){
-    throw setting_error( "set", "IOB" );
-  }
-  frog_config.setatt( "settings", outname + ".settings", "IOB" );
-  frog_config.setatt( "version", "2.0", "IOB" );
-  string frog_cfg = outputdir + "frog-chunker.cfg.template";
+  frog_config.setatt( "settings", outname + ".settings", "NER" );
+  frog_config.setatt( "known_ners", gazeteer_name, "NER" );
+  frog_config.setatt( "version", "2.0", "NER" );
+
+  string frog_cfg = outputdir + "frog-ner.cfg.template";
   frog_config.create_configfile( frog_cfg );
   cout << "stored a frog configfile template: " << frog_cfg << endl;
   return EXIT_SUCCESS;
