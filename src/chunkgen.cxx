@@ -28,8 +28,6 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <map>
-#include <set>
 #include <string>
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
