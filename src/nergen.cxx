@@ -276,10 +276,7 @@ int main(int argc, char * const argv[] ) {
     }
   }
   if ( !opts.extract( 'b', base_name ) ){
-    base_name = use_config.lookUp( "baseName" );
-    if ( base_name.empty() ){
-      base_name = "nergen";
-    }
+    use_config.setatt( "baseName", base_name, "NER" );
   }
   merge_configs( use_config, default_config ); // to be sure to have all we need
   if ( opts.extract( 'g', gazetteer_name ) ){
@@ -289,6 +286,7 @@ int main(int argc, char * const argv[] ) {
   }
   else {
     cerr << "missing gazetteer option (-g)" << endl;
+    usage( opts.prog_name() );
     exit(EXIT_FAILURE);
   }
 
@@ -323,9 +321,14 @@ int main(int argc, char * const argv[] ) {
   if ( perc_opt.empty() ){
     throw setting_error( "%", "NER" );
   }
+  base_name = use_config.lookUp( "baseName", "NER" );
+  if ( base_name.empty() ){
+    throw setting_error( "baseName", "NER" );
+  }
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
     cerr << "missing inputfile" << endl;
+    usage( opts.prog_name() );
     exit(EXIT_FAILURE);
   }
   else if ( names.size() > 1 ){
