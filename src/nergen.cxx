@@ -123,7 +123,7 @@ string UnicodeToUTF8( const UnicodeString& s ){
 }
 
 void usage( const string& name ){
-  cerr << name << " [-c configfile] [-O outputdir] [-g gazeteerfile] inputfile"
+  cerr << name << " [-c configfile] [-O outputdir] [-g gazetteerfile] inputfile"
        << endl;
   cerr << name << " will convert a 'traditionally' IOB tagged corpus into\n"
        << " a MBT datafile enriched with both POS tag and gazetteer information\n"
@@ -247,7 +247,7 @@ int main(int argc, char * const argv[] ) {
   string outputdir;
   string configfile;
   string base_name;
-  string gazeteer_name;
+  string gazetteer_name;
   if ( opts.extract( 'h' ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
@@ -282,13 +282,13 @@ int main(int argc, char * const argv[] ) {
     }
   }
   merge_configs( use_config, default_config ); // to be sure to have all we need
-  if ( opts.extract( 'g', gazeteer_name ) ){
-    if ( !fill_gazet( gazeteer_name ) ){
+  if ( opts.extract( 'g', gazetteer_name ) ){
+    if ( !fill_gazet( gazetteer_name ) ){
       exit( EXIT_FAILURE );
     }
   }
   else {
-    cerr << "missing gazeteer option (-g)" << endl;
+    cerr << "missing gazetteer option (-g)" << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -385,7 +385,7 @@ int main(int argc, char * const argv[] ) {
     output_config.setatt( "configDir", outputdir, "global" );
   }
   output_config.setatt( "settings", outname + ".settings", "NER" );
-  output_config.setatt( "known_ners", gazeteer_name, "NER" );
+  output_config.setatt( "known_ners", gazetteer_name, "NER" );
   output_config.setatt( "version", "2.0", "NER" );
 
   string frog_cfg = outputdir + "frog-ner.cfg.template";
