@@ -53,24 +53,56 @@ static NERTagger myNer(&mylog);
 
 string EOS_MARK = "\n";
 
-static Configuration my_config;
-static Configuration frog_config;
+static Configuration default_config; // sane defaults
+static Configuration use_config;     // the config we gonna use
 
 void set_default_config(){
-  my_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
-  my_config.setatt( "baseName", "nergen", "global" );
-  my_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
-  my_config.setatt( "p", "ddwdwfWawaa", "NER" );
-  my_config.setatt( "P", "chnppddwdwFawawasss", "NER" );
-  my_config.setatt( "n", "10", "NER" );
-  my_config.setatt( "M", "1000", "NER" );
-  my_config.setatt( "%", "5", "NER" );
-  my_config.setatt( "timblOpts",
+  default_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
+  default_config.setatt( "baseName", "nergen", "NER" );
+  default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
+  default_config.setatt( "p", "ddwdwfWawaa", "NER" );
+  default_config.setatt( "P", "chnppddwdwFawawasss", "NER" );
+  default_config.setatt( "n", "10", "NER" );
+  default_config.setatt( "M", "1000", "NER" );
+  default_config.setatt( "%", "5", "NER" );
+  default_config.setatt( "timblOpts",
 		    "+vS -G -FColumns K: -a4 U: -a2 -q2 -mM -k11 -dID",
 		    "NER" );
-  my_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-ner-nl", "NER" );
-  my_config.setatt( "max_ner_size", "15", "NER" );
+  default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-ner-nl", "NER" );
+  default_config.setatt( "max_ner_size", "15", "NER" );
 
+}
+
+void merge_cf_val( Configuration& out, const Configuration& in,
+		   const string& att, const string& section ) {
+  string val = out.lookUp( att, section );
+  if ( val.empty() ){
+    string in_val = in.lookUp( att, section );
+    if ( !in_val.empty() ){
+      out.setatt( att, in_val, section );
+    }
+  }
+}
+
+void merge_configs( Configuration& out, const Configuration& in ) {
+  // should be a member of Configuration Class that does this smartly
+  // for now: we just enrich 'out' with all 'in' stuff that is NOT
+  // already present in 'out'
+
+  // first the global stuff
+  merge_cf_val( out, in, "configDir", "global" );
+  // the default POS tagger
+  merge_cf_val( out, in, "settings", "tagger" );
+  // and the NER stuff
+  merge_cf_val( out, in, "baseName", "NER" );
+  merge_cf_val( out, in, "p", "NER" );
+  merge_cf_val( out, in, "P", "NER" );
+  merge_cf_val( out, in, "n", "NER" );
+  merge_cf_val( out, in, "M", "NER" );
+  merge_cf_val( out, in, "%", "NER" );
+  merge_cf_val( out, in, "timblOpts", "NER" );
+  merge_cf_val( out, in, "set", "NER" );
+  merge_cf_val( out, in, "max_ner_size", "NER" );
 }
 
 class setting_error: public std::runtime_error {
@@ -90,8 +122,23 @@ string UnicodeToUTF8( const UnicodeString& s ){
   return result;
 }
 
-void usage(){
-  cerr << "nergen [-c configfile] [-O outputdir] [-g gazeteerfile] inputfile"
+void usage( const string& name ){
+  cerr << name << " [-c configfile] [-O outputdir] [-g gazeteerfile] inputfile"
+       << endl;
+  cerr << name << " will convert a 'traditionally' IOB tagged corpus into\n"
+       << " a MBT datafile enriched with both POS tag and gazetteer information\n"
+       << endl << " After that, a MBT tagger will be trained on that file"
+       << endl;
+  cerr << "-c 'configfile'\t An existing configfile that will be enriched\n"
+       << "\t\t with additional NER specific information." << endl;
+  cerr << "-O 'outputdir'\t The directoy where all the outputfiles are stored\n"
+       << "\t\t highly recommended to use, because a lot of files are created\n"
+       << "\t\t and your working directory will get cluttered." << endl;
+  cerr << "-g 'gazetteer'\t a file describing the gazetteer info in the\n"
+       << "\t\t format 'ner-cat1<tab>file1'" << endl
+       << "\t\t        '...' " << endl
+       << "\t\t        'ner-catn<tab> filen'" << endl
+       << "\t\t were every file1 .. filen is a list of space separated names"
        << endl;
 }
 
@@ -197,13 +244,12 @@ int main(int argc, char * const argv[] ) {
     cerr << e.what() << endl;
     exit(EXIT_FAILURE);
   }
-  bool have_config=false;
   string outputdir;
   string configfile;
   string base_name;
   string gazeteer_name;
   if ( opts.extract( 'h' ) ){
-    usage();
+    usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
   }
 
@@ -211,17 +257,13 @@ int main(int argc, char * const argv[] ) {
     cerr << "VERSION: " << VERSION << endl;
     exit( EXIT_SUCCESS );
   }
-
+  set_default_config();
   if ( opts.extract( 'c', configfile ) ){
-    if ( !my_config.fill( configfile ) ) {
+    if ( !use_config.fill( configfile ) ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
-    have_config = true;
     cout << "using configuration: " << configfile << endl;
-  }
-  else {
-    set_default_config();
   }
   bool keepX = opts.extract( 'X' );
   opts.extract( 'O', outputdir );
@@ -234,11 +276,12 @@ int main(int argc, char * const argv[] ) {
     }
   }
   if ( !opts.extract( 'b', base_name ) ){
-    base_name = my_config.lookUp( "baseName" );
+    base_name = use_config.lookUp( "baseName" );
     if ( base_name.empty() ){
       base_name = "nergen";
     }
   }
+  merge_configs( use_config, default_config ); // to be sure to have all we need
   if ( opts.extract( 'g', gazeteer_name ) ){
     if ( !fill_gazet( gazeteer_name ) ){
       exit( EXIT_FAILURE );
@@ -248,37 +291,35 @@ int main(int argc, char * const argv[] ) {
     cerr << "missing gazeteer option (-g)" << endl;
     exit(EXIT_FAILURE);
   }
-  if ( have_config ){
-    myNer.init( my_config );
-  }
 
-  // first check if all required options are present in the config
-  //
-  string ner_set_name = my_config.lookUp( "set", "NER" );
+  // get all required options from the merged the config
+  // normally these are all there now, so no exceptions then
+
+  string ner_set_name = use_config.lookUp( "set", "NER" );
   if ( ner_set_name.empty() ){
     throw setting_error( "set", "NER" );
   }
-  string p_pat = my_config.lookUp( "p", "NER" );
+  string p_pat = use_config.lookUp( "p", "NER" );
   if ( p_pat.empty() ){
     throw setting_error( "p", "NER" );
   }
-  string P_pat = my_config.lookUp( "P", "NER" );
+  string P_pat = use_config.lookUp( "P", "NER" );
   if ( P_pat.empty() ){
     throw setting_error( "P", "NER" );
   }
-  string timblopts = my_config.lookUp( "timblOpts", "NER" );
+  string timblopts = use_config.lookUp( "timblOpts", "NER" );
   if ( timblopts.empty() ){
     throw setting_error( "timblOpts", "NER" );
   }
-  string M_opt = my_config.lookUp( "M", "NER" );
+  string M_opt = use_config.lookUp( "M", "NER" );
   if ( M_opt.empty() ){
     throw setting_error( "M", "NER" );
   }
-  string n_opt = my_config.lookUp( "n", "NER" );
+  string n_opt = use_config.lookUp( "n", "NER" );
   if ( n_opt.empty() ){
     throw setting_error( "n", "NER" );
   }
-  string perc_opt = my_config.lookUp( "%", "NER" );
+  string perc_opt = use_config.lookUp( "%", "NER" );
   if ( perc_opt.empty() ){
     throw setting_error( "%", "NER" );
   }
@@ -291,13 +332,14 @@ int main(int argc, char * const argv[] ) {
     cerr << "only 1 inputfile is allowed" << endl;
     exit(EXIT_FAILURE);
   }
-  string mbt_setting = my_config.lookUp( "settings", "tagger" );
+  string mbt_setting = use_config.lookUp( "settings", "tagger" );
   if ( mbt_setting.empty() ){
     throw setting_error( "settings", "tagger" );
   }
-  mbt_setting = "-s " + my_config.configDir() + mbt_setting + " -vcf" ;
+  mbt_setting = "-s " + use_config.configDir() + mbt_setting + " -vcf" ;
   MbtAPI *PosTagger = new MbtAPI( mbt_setting, mylog );
   if ( !PosTagger->isInit() ){
+    cerr << "unable to initialize a POS tagger using:" << mbt_setting << endl;
     exit( EXIT_FAILURE );
   }
   string inpname = names[0];
@@ -327,24 +369,27 @@ int main(int argc, char * const argv[] ) {
        << endl;
   MbtAPI::GenerateTagger( taggercommand );
   cout << "finished tagger" << endl;
-  frog_config = my_config;
-  frog_config.clearatt( "p", "NER" );
-  frog_config.clearatt( "P", "NER" );
-  frog_config.clearatt( "timblOpts", "NER" );
-  frog_config.clearatt( "M", "NER" );
-  frog_config.clearatt( "n", "NER" );
-  frog_config.clearatt( "baseName" );
-  frog_config.clearatt( "%", "NER" );
-  frog_config.clearatt( "configDir", "global" );
+  // create a new configfile, based on the use_config
+  // first clear unwanted stuff
+  use_config.clearatt( "baseName", "NER" );
+  use_config.clearatt( "p", "NER" );
+  use_config.clearatt( "P", "NER" );
+  use_config.clearatt( "timblOpts", "NER" );
+  use_config.clearatt( "M", "NER" );
+  use_config.clearatt( "n", "NER" );
+  use_config.clearatt( "%", "NER" );
+  use_config.clearatt( "configDir", "global" );
+
+  Configuration output_config = use_config;
   if ( !outputdir.empty() ){
-    frog_config.setatt( "configDir", outputdir, "global" );
+    output_config.setatt( "configDir", outputdir, "global" );
   }
-  frog_config.setatt( "settings", outname + ".settings", "NER" );
-  frog_config.setatt( "known_ners", gazeteer_name, "NER" );
-  frog_config.setatt( "version", "2.0", "NER" );
+  output_config.setatt( "settings", outname + ".settings", "NER" );
+  output_config.setatt( "known_ners", gazeteer_name, "NER" );
+  output_config.setatt( "version", "2.0", "NER" );
 
   string frog_cfg = outputdir + "frog-ner.cfg.template";
-  frog_config.create_configfile( frog_cfg );
+  output_config.create_configfile( frog_cfg );
   cout << "stored a frog configfile template: " << frog_cfg << endl;
   return EXIT_SUCCESS;
 }
