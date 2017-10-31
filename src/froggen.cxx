@@ -48,20 +48,83 @@ using namespace TiCC;
 int debug = 0;
 const int HISTORY = 20;
 
-bool have_config = false;
+static Configuration use_config;
+static Configuration default_config;
 
-// some defaults (for Dutch)
-const string dutch_particles = "[WW(vd/be] [WW(vd/ge]";
-const string dutch_p_pat = "dddwfWawa";
-const string dutch_P_pat = "chnppdddwFawasss";
-const string dutch_timblopts = "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL";
-const string dutch_M_opt = "500";
-const string dutch_lemma_timbl_opts = "-a1 -w2 +vS";
-const string dutch_mblem_set = "http://ilk.uvt.nl/folia/sets/frog-mblem-nl";
-const string dutch_tagger_set = "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn";
+void set_default_config(){
+  //  default_config.setatt( "configDir",
+  //			 string(SYSCONF_PATH) + "/frog/nld/",
+  //			 "global");
+  default_config.setatt( "baseName", "froggen", "global" );
+  // tagger defaults
+  default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
+  default_config.setatt( "p", "dddwfWawa", "tagger" );
+  default_config.setatt( "P", "chnppdddwFawasss", "tagger" );
+  default_config.setatt( "n", "1", "tagger" );
+  default_config.setatt( "M", "500", "tagger" );
+  default_config.setatt( "%", "5", "tagger" );
+  default_config.setatt( "timblOpts",
+			 "+vS -G0 +D K: -w1 -a1 U: -a0 -w1 -mM -k9 -dIL",
+			 "tagger" );
+  default_config.setatt( "set",
+			 "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn",
+			 "tagger" );
+  // lemmatizer defaults
+  default_config.setatt( "set",
+			 "http://ilk.uvt.nl/folia/sets/frog-mblem-nl",
+			 "mblem" );
+  default_config.setatt( "particles", "[WW(vd/be] [WW(vd/ge]", "mblem" );
+  default_config.setatt( "timblOpts", "-a1 -w2 +vS", "mblem" );
+  // tokenizer default
+  default_config.setatt( "rulesFile", "tokconfig-nld", "tokenizer" );
+  default_config.setatt( "configDir",
+  			 string(SYSCONF_PATH) + "/ucto/",
+  			 "tokenizer" );
+}
 
-static Configuration my_config;
-static Configuration frog_config;
+void merge_cf_val( Configuration& out, const Configuration& in,
+		   const string& att, const string& section ) {
+  string val = out.lookUp( att, section );
+  if ( val.empty() ){
+    string in_val = in.lookUp( att, section );
+    if ( !in_val.empty() ){
+      out.setatt( att, in_val, section );
+    }
+  }
+}
+
+void merge_configs( Configuration& out, const Configuration& in ) {
+  // should be a member of Configuration Class that does this smartly
+  // for now: we just enrich 'out' with all 'in' stuff that is NOT
+  // already present in 'out'
+
+  // first the global stuff
+  //  merge_cf_val( out, in, "configDir", "global" );
+  merge_cf_val( out, in, "baseName", "global" );
+  // the default POS tagger
+  merge_cf_val( out, in, "settings", "tagger" );
+  merge_cf_val( out, in, "p", "tagger" );
+  merge_cf_val( out, in, "P", "tagger" );
+  merge_cf_val( out, in, "n", "tagger" );
+  merge_cf_val( out, in, "M", "tagger" );
+  merge_cf_val( out, in, "%", "tagger" );
+  merge_cf_val( out, in, "timblOpts", "tagger" );
+  merge_cf_val( out, in, "set", "tagger" );
+  // the lemmatizer
+  merge_cf_val( out, in, "particles", "mblem" );
+  merge_cf_val( out, in, "timblOpts", "mblem" );
+  merge_cf_val( out, in, "set", "mblem" );
+  // the tokenizer
+  merge_cf_val( out, in, "rulesFile", "tokenizer" );
+  merge_cf_val( out, in, "configDir", "tokenizer" );
+}
+
+class setting_error: public std::runtime_error {
+public:
+  setting_error( const string& key, const string& mod ):
+    std::runtime_error( "missing key: '" + key + "' for module: '" + mod + "'" )
+  {};
+};
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -73,9 +136,28 @@ string UnicodeToUTF8( const UnicodeString& s ){
   return result;
 }
 
-void usage(){
-  cerr << "froggen -T tagggedcorpus [-l lemmalist] [-c configfile] [-e encoding] [-O outputdir]"
+void usage( const string& name ){
+  cerr << name << " -T taggedcorpus [-l lemmalist] [-c configfile] [-e encoding] [-O outputdir]"
        << endl;
+  cerr << name << " trains a Tagger AND a Lemmatizer on the 'taggedcorpus' " << endl
+       << "  optionally the lemmatizer is also trained on 'lemmalist'."
+       << endl;
+  cerr << "  the tagged corpus MUST contain tagged sentences in the format: " << endl
+       << "\t Word-1<tab>Lemma-1<tab>POS-tag-1" << endl
+       << "\t  ..." << endl
+       << "\t Word-n<tab>Lemma-n<tab>POS-tag-n" << endl
+       << "\t <utt>" << endl;
+  cerr << " The lemmalist MUST be in the same format, but single lines only," << endl
+       << " without <utt> markers: 'Word-1<tab>Lemma-1<tab>POS-tag-1' " << endl;
+  cerr << "-c 'fonfig' an optional configfile. Use only to override the system defaults" << endl
+       << "\t\for the Tagger, the Lemmatizer and the Tokenizer" << endl;
+  cerr << "-O 'outputdir' Store all files in 'outputdir' (Higly recommended)" << endl;
+  cerr << "-e 'encoding' Normally we handle UTF-8, but other encodings are supported." << endl;
+  cerr << "-t 'tokenizerfile' An ucto style rulesfile can be specified here." << endl
+       << "\t It must include a full path!" << endl;
+  cerr << "-b 'base' set the prefix for all generated files. (default 'froggen')" << endl;
+  cerr << "-h This messages." << endl;
+  cerr << "-v or --version Give version info." << endl;
 }
 
 void fill_lemmas( istream& is,
@@ -135,11 +217,10 @@ UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<Unico
   return "";
 }
 
-void create_tagger( const string& base_name, const string& corpus_name ){
-#pragma omp critical (sync_out)
-  {
-    cout << "create a tagger from: " << corpus_name << endl;
-  }
+void create_tagger( const Configuration& config,
+		    const string& base_name,
+		    const string& corpus_name ){
+  cout << "create a tagger from: " << corpus_name << endl;
   ifstream corpus( corpus_name );
   string tag_data_name = base_name + ".data";
   ofstream os( tag_data_name );
@@ -160,53 +241,24 @@ void create_tagger( const string& base_name, const string& corpus_name ){
       }
     }
   }
-#pragma omp critical (sync_out)
-  {
-    cout << "created an inputfile for the tagger: " << tag_data_name << endl;
-  }
-  string p_pat = TiCC::trim( my_config.lookUp( "p", "tagger" ), " \"" );
-  if ( p_pat.empty() ){
-    p_pat = dutch_p_pat;
-  }
-  string P_pat = TiCC::trim( my_config.lookUp( "P", "tagger" ), " \"" );
-  if ( P_pat.empty() ){
-    P_pat =  dutch_P_pat;
-  }
-  string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "tagger" )
-				 , " \"" );
-  if ( timblopts.empty() ){
-    timblopts = dutch_timblopts;
-  }
-  string M_opt = TiCC::trim( my_config.lookUp( "M", "tagger" ), " \"" );
-  if ( M_opt.empty() ){
-    M_opt = dutch_M_opt;
-  }
-  string N_opt = TiCC::trim( my_config.lookUp( "n", "tagger" ), " \"" );
+  cout << "created an inputfile for the tagger: " << tag_data_name << endl;
+  string p_pat = config.lookUp( "p", "tagger" );
+  string P_pat = config.lookUp( "P", "tagger" );
+  string timblopts = config.lookUp( "timblOpts", "tagger" );
+  string M_opt = config.lookUp( "M", "tagger" );
+  string n_opt = config.lookUp( "n", "tagger" );
   string taggercommand = "-T " + tag_data_name
     + " -s " + base_name + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
-    + " -M " + M_opt;
-  if ( !N_opt.empty() ){
-    taggercommand += " -n " + N_opt;
-  }
+    + " -M " + M_opt
+    + " -n " + n_opt;
   taggercommand += " -DLogSilent"; // shut up
-#pragma omp critical (sync_out)
-  {
-    cout << "start tagger: " << taggercommand << endl;
-    cout << "this may take several minutes, depending on the corpus size."
-	 << endl;
-  }
+  cout << "start tagger: " << taggercommand << endl;
+  cout << "this may take several minutes, depending on the corpus size."
+       << endl;
   MbtAPI::GenerateTagger( taggercommand );
-#pragma omp critical (sync_out)
-  {
-    frog_config.clearatt( "p", "tagger" );
-    frog_config.clearatt( "P", "tagger" );
-    frog_config.clearatt( "timblOpts", "tagger" );
-    frog_config.clearatt( "M", "tagger" );
-    frog_config.clearatt( "n", "tagger" );
-    cout << "finished tagger" << endl;
-  }
+  cout << "finished creating tagger" << endl;
 }
 
 map<string,set<string>> particles;
@@ -379,41 +431,28 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
     os << out << endl;
     outLine.remove();
   }
-#pragma omp critical (sync_out)
-  {
-    cout << "created a mblem trainingsfile: " << filename << endl;
-  }
+  cout << "created a mblem trainingsfile: " << filename << endl;
 }
 
-void train_mblem( const string& inputfile, const string& outputfile ){
-  string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "mblem" ),
-				 " \"" );
-  if ( timblopts.empty() ){
-    timblopts = dutch_lemma_timbl_opts;
-  }
-  #pragma omp critical (sync_out)
-  {
-    frog_config.setatt( "timblOpts", timblopts, "mblem" );
-    cout << "Timbl: Start training " << inputfile << " with Options: "
+void train_mblem( const Configuration& config,
+		  const string& inputfile,
+		  const string& outputfile ){
+  string timblopts = config.lookUp( "timblOpts", "mblem" );
+  cout << "Timbl: Start training Lemmas " << inputfile << " with Options: "
 	 << timblopts << endl;
-  }
   Timbl::TimblAPI timbl( timblopts );
   timbl.Learn( inputfile );
   timbl.WriteInstanceBase( outputfile );
-#pragma omp critical (sync_out)
-  {
-    cout << "Timbl: Done, stored instancebase : " << outputfile << endl;
-  }
+  cout << "Timbl: Done, stored Lemma instancebase : " << outputfile << endl;
 }
 
-void create_lemmatizer( const multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>>& data, const string& mblem_tree_file ){
+void create_lemmatizer( const Configuration& config,
+			const multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>>& data,
+			const string& mblem_tree_file ){
   string mblem_data_file = mblem_tree_file + ".data";
-#pragma omp critical (sync_out)
-  {
-    cout << "create a lemmatizer into: " << mblem_tree_file << endl;
-  }
+  cout << "create a lemmatizer into: " << mblem_tree_file << endl;
   create_mblem_trainfile( data, mblem_data_file );
-  train_mblem( mblem_data_file, mblem_tree_file );
+  train_mblem( config, mblem_data_file, mblem_tree_file );
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
@@ -435,7 +474,7 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","version");
+  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","help,version");
   try {
     opts.parse_args( argc, argv );
   }
@@ -443,7 +482,7 @@ int main( int argc, char * const argv[] ) {
     cerr << e.what() << endl;
     exit(EXIT_FAILURE);
   }
-
+  set_default_config();
   string base_name;
   string corpusname;
   string outputdir;
@@ -452,8 +491,8 @@ int main( int argc, char * const argv[] ) {
   string configfile;
   string encoding = "UTF-8";
 
-  if ( opts.extract( 'h' ) ){
-    usage();
+  if ( opts.extract( 'h' ) || opts.extract( "help") ){
+    usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
   }
 
@@ -464,6 +503,7 @@ int main( int argc, char * const argv[] ) {
 
   if ( !opts.extract( 'T', corpusname ) ){
     cerr << "Missing a corpus!, (-T option)" << endl;
+    usage( opts.prog_name() );
     exit( EXIT_FAILURE );
   }
   if ( !isFile( corpusname ) ){
@@ -471,18 +511,16 @@ int main( int argc, char * const argv[] ) {
     exit( EXIT_FAILURE );
   }
   if ( opts.extract( 'c', configfile ) ){
-    if ( !my_config.fill( configfile ) ) {
+    if ( !use_config.fill( configfile ) ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
-    have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
+  merge_configs( use_config, default_config ); // to be sure to have all we need
+
   if ( !opts.extract( 'b', base_name ) ){
-    base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
-    if ( base_name.empty() ){
-      base_name = "froggen";
-    }
+    base_name = use_config.lookUp( "baseName", "global" );
   }
   opts.extract( 'l', lemma_name );
   if ( !lemma_name.empty() ){
@@ -500,8 +538,18 @@ int main( int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
-  frog_config = my_config;
-  opts.extract( 't', tokfile );
+  bool t_opt = opts.extract( 't', tokfile );
+  if ( !t_opt ){
+    string tokdir = use_config.getatt( "configDir", "tokenizer" );
+    if ( !tokdir.empty() && (tokdir.back() != '/' ) ){
+      use_config.clearatt( "configDir", "tokenizer" );
+      tokdir += "/";
+    }
+    string file = use_config.getatt( "rulesFile", "tokenizer" );
+    if ( !file.empty() ){
+      tokfile = tokdir + file;
+    }
+  }
   Tokenizer::TokenizerClass *tokenizer = 0;
   if ( !tokfile.empty() ) {
     if ( !isFile(tokfile) ){
@@ -509,25 +557,24 @@ int main( int argc, char * const argv[] ) {
       exit( EXIT_FAILURE );
     }
     if ( !outputdir.empty() ){
-      string outname = outputdir + tokfile;
+      string outname = outputdir + TiCC::basename(tokfile);
       ofstream os( outname );
       ifstream is( tokfile );
       os << is.rdbuf();
       tokfile = outname;
     }
-    tokenizer = new Tokenizer::TokenizerClass();
-    tokenizer->init( tokfile );
-    frog_config.setatt( "rulesFile", tokfile, "tokenizer" );
+    use_config.setatt( "rulesFile", TiCC::basename(tokfile), "tokenizer" );
+    if ( t_opt ){
+      tokenizer = new Tokenizer::TokenizerClass();
+      tokenizer->init( tokfile );
+    }
   }
   opts.extract( 'e', encoding );
-  string mblem_particles = TiCC::trim( my_config.lookUp( "particles", "mblem" ),
-				       " \"" );
-  if ( mblem_particles.empty() && !have_config ){
-    mblem_particles = dutch_particles;
-  }
+  string mblem_particles = use_config.lookUp( "particles", "mblem" );
   if ( !mblem_particles.empty() ){
     fill_particles( mblem_particles );
   }
+
   multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>> data;
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
@@ -542,40 +589,35 @@ int main( int argc, char * const argv[] ) {
   }
 
   string tag_full_name = outputdir + base_name;
-  string mblem_tree_name = TiCC::trim( my_config.lookUp( "treeFile", "mblem" ),
-				       " \"" );
+  string mblem_tree_name = use_config.lookUp( "treeFile", "mblem" );
   if ( mblem_tree_name.empty() ){
     mblem_tree_name = base_name + ".tree";
   }
   string mblem_full_name = outputdir + mblem_tree_name;
-  string mblem_set_name = TiCC::trim( my_config.lookUp( "set", "mblem" ) );
-  if ( mblem_set_name.empty() && !have_config ){
-    mblem_set_name = dutch_mblem_set;
+  string mblem_set_name = use_config.lookUp( "set", "mblem" );
+  if ( mblem_set_name.empty() ){
+    throw setting_error( "set", "mblem" );
   }
-  string tagger_set_name = TiCC::trim( my_config.lookUp( "set", "tagger" ) );
-  if ( tagger_set_name.empty() && !have_config ){
-    tagger_set_name = dutch_tagger_set;
+  string tagger_set_name = use_config.lookUp( "set", "tagger" );
+  if ( tagger_set_name.empty() ){
+    throw setting_error( "set", "mblem" );
   }
   if ( tokenizer ){
     check_data( tokenizer, data );
   }
-#pragma omp parallel sections
-  {
-#pragma omp section
-    {
-      create_tagger( tag_full_name, corpusname );
-    }
-#pragma omp section
-    {
-      create_lemmatizer( data, mblem_full_name );
-    }
-  }
-  frog_config.clearatt( "baseName" );
-  frog_config.clearatt( "particles" );
+  create_tagger( use_config, tag_full_name, corpusname );
+  create_lemmatizer( use_config, data, mblem_full_name );
+  Configuration frog_config = use_config;
+  frog_config.clearatt( "baseName", "global" );
+  frog_config.clearatt( "particles", "mblem"  );
   frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
-  frog_config.setatt( "set", mblem_set_name, "mblem" );
-  frog_config.setatt( "set", tagger_set_name, "tagger" );
   frog_config.setatt( "settings", base_name + ".settings", "tagger" );
+  frog_config.clearatt( "p", "tagger" );
+  frog_config.clearatt( "P", "tagger" );
+  frog_config.clearatt( "timblOpts", "tagger" );
+  frog_config.clearatt( "M", "tagger" );
+  frog_config.clearatt( "n", "tagger" );
+  frog_config.clearatt( "%", "tagger" );
   string frog_cfg = outputdir + "frog.cfg.template";
   if ( frog_cfg == configfile ){
     frog_cfg += ".new";
