@@ -45,7 +45,6 @@
 #include "config.h"
 
 using namespace std;
-using namespace TiCC;
 
 const int HISTORY = 20;
 const int LEFT = 6;
@@ -56,12 +55,45 @@ bool have_config = false;
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
 
-// some defaults (for Dutch)
-const string dutch_morph_timbl_opts = "-a1 -w2 +vS";
-const string dutch_mbma_set = "http://ilk.uvt.nl/folia/sets/frog-mbma-nl";
+static TiCC::Configuration default_config;
+static TiCC::Configuration use_config;
 
-static Configuration my_config;
-static Configuration frog_config;
+void set_default_config(){
+  default_config.setatt( "baseName", "morgen", "mbma" );
+  default_config.setatt( "cgn_clex_main", "cgntags.main", "mbma" );
+  default_config.setatt( "cgn_clex_sub", "cgntags.sub", "mbma" );
+  default_config.setatt( "timblOpts", "-a1 -w2 +vS", "mbma" );
+  default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-mbma-nl", "mbma" );
+  default_config.setatt( "clex_set", "http://ilk.uvt.nl/folia/sets/frog-mbpos-clex", "mbma" );
+  default_config.setatt( "cgnDir",
+  			 string(SYSCONF_PATH) + "/frog/nld/",
+  			 "mbma" );
+}
+
+void merge_cf_val( TiCC::Configuration& out, const TiCC::Configuration& in,
+		   const string& att, const string& section ) {
+  string val = out.lookUp( att, section );
+  if ( val.empty() ){
+    string in_val = in.lookUp( att, section );
+    if ( !in_val.empty() ){
+      out.setatt( att, in_val, section );
+    }
+  }
+}
+
+void merge_configs( TiCC::Configuration& out, const TiCC::Configuration& in ) {
+  // should be a member of Configuration Class that does this smartly
+  // for now: we just enrich 'out' with all 'in' stuff that is NOT
+  // already present in 'out'
+
+  merge_cf_val( out, in, "baseName", "mbma" );
+  merge_cf_val( out, in, "timblOpts", "mbma" );
+  merge_cf_val( out, in, "set", "mbma" );
+  merge_cf_val( out, in, "clex_set", "mbma" );
+  merge_cf_val( out, in, "cgn_clex_main", "mbma" );
+  merge_cf_val( out, in, "cgn_clex_sub", "mbma" );
+  merge_cf_val( out, in, "cgnDir", "mbma" );
+}
 
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
@@ -73,8 +105,8 @@ string UnicodeToUTF8( const UnicodeString& s ){
   return result;
 }
 
-void usage(){
-  cerr << "morgen [-c configfile] [-O outputdir] "
+void usage( const string& name ){
+  cerr << name <<" [-c configfile] [-O outputdir] "
        << endl;
 }
 
@@ -172,12 +204,7 @@ void create_instance_file( const string& inpname, const string& outname ){
 }
 
 void create_instance_base( const string& dataname, const string& treename ){
-  string timblopts = TiCC::trim( my_config.lookUp( "timblOpts", "mbma" ),
-				 " \"" );
-  if ( timblopts.empty() ){
-    timblopts = dutch_morph_timbl_opts;
-  }
-  frog_config.setatt( "timblOpts", timblopts, "mbma" );
+  string timblopts = use_config.lookUp( "timblOpts", "mbma" );
   cout << "Timbl: Start training " << dataname << " with Options: "
        << timblopts << endl;
 
@@ -188,7 +215,7 @@ void create_instance_base( const string& dataname, const string& treename ){
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hV","version");
+  TiCC::CL_Options opts("b:O:c:hV","version,help,cgn:");
   try {
     opts.parse_args( argc, argv );
   }
@@ -200,8 +227,8 @@ int main(int argc, char * const argv[] ) {
   string outputdir;
   string configfile;
   string base_name;
-  if ( opts.extract( 'h' ) ){
-    usage();
+  if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
+    usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
   }
 
@@ -209,30 +236,27 @@ int main(int argc, char * const argv[] ) {
     cerr << "VERSION: " << VERSION << endl;
     exit( EXIT_SUCCESS );
   }
-
+  set_default_config();
   if ( opts.extract( 'c', configfile ) ){
-    if ( !my_config.fill( configfile ) ) {
+    if ( !use_config.fill( configfile ) ) {
       cerr << "unable to open:" << configfile << endl;
       exit( EXIT_FAILURE );
     }
-    have_config = true;
     cout << "using configuration: " << configfile << endl;
   }
   opts.extract( 'O', outputdir );
   if ( !outputdir.empty() ){
     if ( outputdir[outputdir.length()-1] != '/' )
       outputdir += "/";
-    if ( !isDir( outputdir ) && !createPath( outputdir ) ){
+    if ( !TiCC::isDir( outputdir ) && !TiCC::createPath( outputdir ) ){
       cerr << "output dir not usable: " << outputdir << endl;
       exit(EXIT_FAILURE);
     }
   }
-  if ( !opts.extract( 'b', base_name ) ){
-    base_name = TiCC::trim( my_config.lookUp( "baseName" ), " \"");
-    if ( base_name.empty() ){
-      base_name = "morgen";
-    }
+  if ( opts.extract( 'b', base_name ) ){
+    use_config.setatt( "baseName", base_name, "mbma" );
   }
+  merge_configs( use_config, default_config ); // to be sure to have all we need
 
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
@@ -243,32 +267,89 @@ int main(int argc, char * const argv[] ) {
     cerr << "only 1 inputfile is allowed" << endl;
     exit(EXIT_FAILURE);
   }
-  frog_config = my_config;
+
+  base_name = use_config.getatt( "baseName", "mbma" );
+
+  TiCC::Configuration frog_config = use_config;
   frog_config.clearatt( "configDir", "global" );
-  if ( !outputdir.empty() ){
-    frog_config.setatt( "configDir", outputdir, "global" );
-  }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
-  string treename = TiCC::trim( my_config.lookUp( "treeFile", "mbma" ) );
+  string treename = use_config.lookUp( "treeFile", "mbma" );
   if ( treename.empty() ){
     treename = base_name + ".tree";
   }
+
+    string cgndir;
+  bool cgn_opt = opts.extract( "cgn", cgndir );
+  if ( cgn_opt ){
+    use_config.setatt( "cgnDir", cgndir, "mbma" );
+  }
+  cgndir = use_config.getatt( "cgnDir", "mbma" );
+  if ( !cgndir.empty() && (cgndir.back() != '/' ) ){
+    use_config.clearatt( "cgnDir", "mbma" );
+    cgndir += "/";
+  }
+  if ( !TiCC::isDir( cgndir ) ){
+    cerr << "unable to find CGN dir: " << cgndir << endl;
+    exit(EXIT_FAILURE);
+  }
+  string mainfile = use_config.getatt( "cgn_clex_main", "mbma" );
+  if ( !mainfile.empty() ){
+    mainfile = cgndir + mainfile;
+  }
+  if ( !mainfile.empty() ) {
+    if ( !TiCC::isFile(mainfile) ){
+      cerr << "unable to find: '" << mainfile << "'" << endl;
+      exit( EXIT_FAILURE );
+    }
+    if ( !outputdir.empty() ){
+      string outname = outputdir + TiCC::basename(mainfile);
+      ofstream os( outname );
+      ifstream is( mainfile );
+      os << is.rdbuf();
+    }
+  }
+  string subfile = use_config.getatt( "cgn_clex_sub", "mbma" );
+  if ( !subfile.empty() ){
+    subfile = cgndir + subfile;
+  }
+  if ( !subfile.empty() ) {
+    if ( !TiCC::isFile(subfile) ){
+      cerr << "unable to find: '" << subfile << "'" << endl;
+      exit( EXIT_FAILURE );
+    }
+    if ( !outputdir.empty() ){
+      string outname = outputdir + TiCC::basename(subfile);
+      ofstream os( outname );
+      ifstream is( subfile );
+      os << is.rdbuf();
+    }
+  }
+
   frog_config.setatt( "treeFile", treename, "mbma" );
   string full_treename = outputdir + treename;
   create_instance_file( inpname, outname );
   create_instance_base( outname, full_treename );
 
-  frog_config.clearatt( "baseName" );
-  string mbma_set_name = TiCC::trim( my_config.lookUp( "set", "mbma" ) );
-  if ( mbma_set_name.empty() && !have_config ){
-    mbma_set_name = dutch_mbma_set;
+  frog_config.clearatt( "baseName", "mbma" );
+  string mbma_set_name = use_config.lookUp( "set", "mbma" );
+
+  string cfg_out;
+  if ( configfile.empty() ){
+    cfg_out = outputdir + "frog-morgen.cfg.template";
   }
-  if ( !mbma_set_name.empty() ){
-    frog_config.setatt( "set", mbma_set_name, "mbma" );
+  else {
+    configfile = TiCC::basename( configfile );
+    const auto ppos = configfile.find( "." );
+    if ( ppos == string::npos ){
+      cfg_out = outputdir + configfile + "-morgen.cfg.template";
+    }
+    else {
+      cfg_out = outputdir + configfile.substr(0,ppos)
+	+ "-morgen" + configfile.substr( ppos );
+    }
   }
-  string frog_cfg = outputdir + "frog.cfg.template";
-  frog_config.create_configfile( frog_cfg );
-  cout << "stored a frog configfile template: " << frog_cfg << endl;
+  frog_config.create_configfile( cfg_out );
+  cout << "stored a frog configfile template: " << cfg_out << endl;
   return EXIT_SUCCESS;
 }
