@@ -75,7 +75,7 @@ PKG_CHECK_MODULES([ucto],[ucto >= 0.9.3])
 CXXFLAGS="$CXXFLAGS $ucto_CFLAGS"
 LIBS="$ucto_LIBS $LIBS"
 
-PKG_CHECK_MODULES([frog],[frog >= 0.13.5])
+PKG_CHECK_MODULES([frog],[frog >= 0.13.9])
 CXXFLAGS="$CXXFLAGS $frog_CFLAGS"
 LIBS="$frog_LIBS $LIBS"
 

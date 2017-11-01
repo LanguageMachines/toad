@@ -39,7 +39,7 @@
 #include "unicode/unistr.h"
 #include "libfolia/folia.h"
 #include "ucto/tokenize.h"
-#include "frog/Frog.h"
+#include "frog/FrogAPI.h"
 #include "frog/mblem_mod.h"
 
 using namespace std;
