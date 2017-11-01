@@ -52,7 +52,7 @@ static Configuration default_config;
 
 void set_default_config(){
   default_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
-  default_config.setatt( "baseName", "chunkgen", "global" );
+  default_config.setatt( "baseName", "chunkgen", "IOB" );
   default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
   default_config.setatt( "p", "dddwfWawa", "IOB" );
   default_config.setatt( "P", "chnppddwFawasss", "IOB" );
@@ -239,7 +239,7 @@ int main(int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
-  if ( !opts.extract( 'b', base_name ) ){
+  if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "IOB" );
   }
   merge_configs( use_config, default_config ); // to be sure to have all we need

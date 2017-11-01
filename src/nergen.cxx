@@ -273,7 +273,7 @@ int main(int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
-  if ( !opts.extract( 'b', base_name ) ){
+  if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "NER" );
   }
   merge_configs( use_config, default_config ); // to be sure to have all we need
