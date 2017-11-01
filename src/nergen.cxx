@@ -278,6 +278,7 @@ int main(int argc, char * const argv[] ) {
   }
   merge_configs( use_config, default_config ); // to be sure to have all we need
   if ( opts.extract( 'g', gazetteer_name ) ){
+    gazetteer_name = realpath( gazetteer_name );
     if ( !fill_gazet( gazetteer_name ) ){
       exit( EXIT_FAILURE );
     }
@@ -345,6 +346,7 @@ int main(int argc, char * const argv[] ) {
   }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
+  string settings_name = outputdir + base_name + ".settings";
 
   cout << "Start enriching: " << inpname << " with POS tags"
        << " (every dot represents 100 tagged sentences)" << endl;
@@ -352,7 +354,7 @@ int main(int argc, char * const argv[] ) {
   cout << endl << "Created a trainingfile: " << outname << endl;
 
   string taggercommand = "-E " + outname
-    + " -s " + outname + ".settings"
+    + " -s " + settings_name
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt
@@ -382,15 +384,27 @@ int main(int argc, char * const argv[] ) {
   use_config.clearatt( "configDir", "global" );
 
   Configuration output_config = use_config;
-  if ( !outputdir.empty() ){
-    output_config.setatt( "configDir", outputdir, "global" );
-  }
-  output_config.setatt( "settings", outname + ".settings", "NER" );
+
+  output_config.setatt( "settings", base_name + ".settings", "NER" );
   output_config.setatt( "known_ners", gazetteer_name, "NER" );
   output_config.setatt( "version", "2.0", "NER" );
 
-  string frog_cfg = outputdir + "frog-ner.cfg.template";
-  output_config.create_configfile( frog_cfg );
-  cout << "stored a frog configfile template: " << frog_cfg << endl;
+  string cfg_out;
+  if ( configfile.empty() ){
+    cfg_out = outputdir + "frog-nergen.cfg.template";
+  }
+  else {
+    configfile = TiCC::basename( configfile );
+    const auto ppos = configfile.find( "." );
+    if ( ppos == string::npos ){
+      cfg_out = outputdir + configfile + "-nergen.cfg.template";
+    }
+    else {
+      cfg_out = outputdir + configfile.substr(0,ppos)
+	+ "-nergen" + configfile.substr( ppos );
+    }
+  }
+  output_config.create_configfile( cfg_out );
+  cout << "stored a frog configfile template: " << cfg_out << endl;
   return EXIT_SUCCESS;
 }

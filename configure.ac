@@ -63,7 +63,7 @@ PKG_CHECK_MODULES([mbt], [mbt >= 3.2.16] )
 CXXFLAGS="$CXXFLAGS $mbt_CFLAGS"
 LIBS="$mbt_LIBS $LIBS"
 
-PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.14] )
+PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.17] )
 CXXFLAGS="$CXXFLAGS $ticcutils_CFLAGS"
 LIBS="$ticcutils_LIBS $LIBS"
 

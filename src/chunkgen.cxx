@@ -296,12 +296,17 @@ int main(int argc, char * const argv[] ) {
     usage( opts.prog_name() );
     exit(EXIT_FAILURE);
   }
+  else if ( !TiCC::isFile( names[0] ) ){
+    cerr << "unable to open inputfile '" << names[0] << "'" << endl;
+    exit(EXIT_FAILURE);
+  }
   MbtAPI *PosTagger = new MbtAPI( mbt_setting, mylog );
   if ( !PosTagger->isInit() ){
     exit( EXIT_FAILURE );
   }
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
+  string setting_name = outputdir + base_name + ".settings";
 
   cout << "Start converting: " << inpname
        << " (every dot represents 100 tagged sentences)" << endl;
@@ -309,7 +314,7 @@ int main(int argc, char * const argv[] ) {
   cout << endl << "Created a trainingfile: " << outname << endl;
 
   string taggercommand = "-E " + outname
-    + " -s " + outname + ".settings"
+    + " -s " + setting_name
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt
@@ -339,10 +344,24 @@ int main(int argc, char * const argv[] ) {
   if ( !outputdir.empty() ){
     frog_config.setatt( "configDir", outputdir, "global" );
   }
-  frog_config.setatt( "settings", outname + ".settings", "IOB" );
+  frog_config.setatt( "settings", base_name + ".settings", "IOB" );
   frog_config.setatt( "version", "2.0", "IOB" );
-  string frog_cfg = outputdir + "frog-chunker.cfg.template";
-  frog_config.create_configfile( frog_cfg );
-  cout << "stored a frog configfile template: " << frog_cfg << endl;
+  string cfg_out;
+  if ( configfile.empty() ){
+    cfg_out = outputdir + "frog-chunkgen.cfg.template";
+  }
+  else {
+    configfile = TiCC::basename( configfile );
+    const auto ppos = configfile.find( "." );
+    if ( ppos == string::npos ){
+      cfg_out = outputdir + configfile + "-chunkgen.cfg.template";
+    }
+    else {
+      cfg_out = outputdir + configfile.substr(0,ppos)
+	+ "-chunkgen" + configfile.substr( ppos );
+    }
+  }
+  frog_config.create_configfile( cfg_out );
+  cout << "stored a frog configfile template: " << cfg_out << endl;
   return EXIT_SUCCESS;
 }
