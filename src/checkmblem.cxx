@@ -35,8 +35,7 @@
 #include "ticcutils/StringOps.h"
 #include "ticcutils/LogStream.h"
 #include "ticcutils/Configuration.h"
-#include "unicode/ustream.h"
-#include "unicode/unistr.h"
+#include "ticcutils/Unicode.h"
 #include "libfolia/folia.h"
 #include "ucto/tokenize.h"
 #include "frog/FrogAPI.h"
@@ -50,10 +49,6 @@ TiCC::LogStream *theErrLog = new TiCC::LogStream(cerr);
 TiCC::Configuration configuration;
 static string configDir = string(SYSCONF_PATH) + "/frog/";
 static string configFileName = configDir + "frog.cfg";
-
-UnicodeString UnicodeStringFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
 
 void usage(){
   cerr << "checkmblem [-i inputfile]" << endl;
@@ -107,9 +102,9 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = UnicodeStringFromS( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
-    lexicon.insert( folia::UnicodeToUTF8( word ) );
+    lexicon.insert( TiCC::UnicodeToUTF8( word ) );
   }
   cout << "found " << lexicon.size() << " words " << endl;
   bron.close();

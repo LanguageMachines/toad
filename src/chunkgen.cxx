@@ -71,17 +71,6 @@ public:
   {};
 };
 
-
-UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
-
-string UnicodeToUTF8( const UnicodeString& s ){
-  string result;
-  s.toUTF8String(result);
-  return result;
-}
-
 void usage( const string& name ){
   cerr << name << " [-c configfile] [-O outputdir] inputfile"
        << endl;

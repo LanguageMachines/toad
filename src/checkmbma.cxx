@@ -37,6 +37,7 @@
 #include "ticcutils/PrettyPrint.h"
 #include "ticcutils/LogStream.h"
 #include "ticcutils/Configuration.h"
+#include "ticcutils/Unicode.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
 #include "libfolia/folia.h"
@@ -55,10 +56,6 @@ static string configFileName = configDir + "frog.cfg";
 Mbma myMbma(theErrLog);
 set<string> lexicon;
 set<string> mor_lexicon;
-
-UnicodeString UnicodeStringFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
 
 template< typename T >
 std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
@@ -176,14 +173,14 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = UnicodeStringFromS( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;
       continue;
     }
-    lexicon.insert( folia::UnicodeToUTF8( word ) );
+    lexicon.insert( TiCC::UnicodeToUTF8( word ) );
   }
   cout << "found " << lexicon.size() << " words " << endl;
   bron.close();

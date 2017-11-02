@@ -34,7 +34,7 @@
 #include "ticcutils/StringOps.h"
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
-#include "ticcutils/Configuration.h"
+#include "ticcutils/Unicode.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
 #include "libfolia/folia.h"
@@ -70,16 +70,6 @@ void set_default_config(){
   			 "mbma" );
 }
 
-UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
-
-string UnicodeToUTF8( const UnicodeString& s ){
-  string result;
-  s.toUTF8String(result);
-  return result;
-}
-
 void usage( const string& name ){
   cerr << name <<" [-c configfile] [-O outputdir] "
        << endl;
@@ -111,7 +101,7 @@ void spitOut( ostream& os, const UnicodeString& word,
     // class
     set<string>::const_iterator it = morphemes[i].begin();
     while ( it != morphemes[i].end() ){
-      out += UnicodeFromS( *it );
+      out += TiCC::UnicodeFromUTF8( *it );
       ++it;
       if ( it != morphemes[i].end() )
 	out += "|";
@@ -147,7 +137,7 @@ void create_instance_file( const string& inpname, const string& outname ){
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    UnicodeString word = UnicodeFromS( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;

@@ -34,6 +34,7 @@
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
 #include "ticcutils/Configuration.h"
+#include "ticcutils/Unicode.h"
 #include "timbl/TimblAPI.h"
 #include "mbt/MbtAPI.h"
 #include "libfolia/folia.h"
@@ -86,16 +87,6 @@ public:
   {};
 };
 
-UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
-
-string UnicodeToUTF8( const UnicodeString& s ){
-  string result;
-  s.toUTF8String(result);
-  return result;
-}
-
 void usage( const string& name ){
   cerr << name << " -T taggedcorpus [-l lemmalist] [-c configfile] [-e encoding] [-O outputdir]"
        << endl;
@@ -137,9 +128,9 @@ void fill_lemmas( istream& is,
       exit( EXIT_FAILURE );
     }
     vector<UnicodeString> uparts(3);
-    uparts[0] = UnicodeFromS( parts[0], enc ); // the word
-    uparts[1] = UnicodeFromS( parts[1], enc ); // the lemma
-    uparts[2] = UnicodeFromS( parts[2], enc ); // the POS tag
+    uparts[0] = UnicodeFromEnc( parts[0], enc ); // the word
+    uparts[1] = UnicodeFromEnc( parts[1], enc ); // the lemma
+    uparts[2] = UnicodeFromEnc( parts[2], enc ); // the POS tag
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
       // so a completely new word

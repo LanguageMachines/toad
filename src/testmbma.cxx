@@ -36,8 +36,8 @@
 #include "ticcutils/Configuration.h"
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/PrettyPrint.h"
-#include "ucto/unicode.h"
 #include "ticcutils/LogStream.h"
+#include "ticcutils/Unicode.h"
 #include "libfolia/folia.h"
 
 #include "frog/cgn_tagger_mod.h"
@@ -140,7 +140,7 @@ void Test( istream& in, bool deep ){
     vector<string> parts;
     if ( TiCC::split( line, parts ) < 2 )
       continue;
-    UnicodeString uWord = folia::UTF8ToUnicode(parts[0]);
+    UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
     uWord.toLower();
     parts.erase(parts.begin());
     vector<Rule *> rules = myMbma.execute( uWord, parts );
