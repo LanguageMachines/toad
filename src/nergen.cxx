@@ -55,9 +55,8 @@ static Configuration default_config; // sane defaults
 static Configuration use_config;     // the config we gonna use
 
 void set_default_config(){
-  default_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
   default_config.setatt( "baseName", "nergen", "NER" );
-  default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
+  default_config.setatt( "settings", "froggen.settings", "tagger" );
   default_config.setatt( "p", "ddwdwfWawaa", "NER" );
   default_config.setatt( "P", "chnppddwdwFawawasss", "NER" );
   default_config.setatt( "n", "10", "NER" );
@@ -69,38 +68,6 @@ void set_default_config(){
   default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-ner-nl", "NER" );
   default_config.setatt( "max_ner_size", "15", "NER" );
 
-}
-
-void merge_cf_val( Configuration& out, const Configuration& in,
-		   const string& att, const string& section ) {
-  string val = out.lookUp( att, section );
-  if ( val.empty() ){
-    string in_val = in.lookUp( att, section );
-    if ( !in_val.empty() ){
-      out.setatt( att, in_val, section );
-    }
-  }
-}
-
-void merge_configs( Configuration& out, const Configuration& in ) {
-  // should be a member of Configuration Class that does this smartly
-  // for now: we just enrich 'out' with all 'in' stuff that is NOT
-  // already present in 'out'
-
-  // first the global stuff
-  merge_cf_val( out, in, "configDir", "global" );
-  // the default POS tagger
-  merge_cf_val( out, in, "settings", "tagger" );
-  // and the NER stuff
-  merge_cf_val( out, in, "baseName", "NER" );
-  merge_cf_val( out, in, "p", "NER" );
-  merge_cf_val( out, in, "P", "NER" );
-  merge_cf_val( out, in, "n", "NER" );
-  merge_cf_val( out, in, "M", "NER" );
-  merge_cf_val( out, in, "%", "NER" );
-  merge_cf_val( out, in, "timblOpts", "NER" );
-  merge_cf_val( out, in, "set", "NER" );
-  merge_cf_val( out, in, "max_ner_size", "NER" );
 }
 
 class setting_error: public std::runtime_error {
@@ -273,10 +240,13 @@ int main(int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
+  else if ( !configfile.empty() ){
+    outputdir = TiCC::dirname( configfile );
+  }
   if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "NER" );
   }
-  merge_configs( use_config, default_config ); // to be sure to have all we need
+  use_config.merge( default_config ); // to be sure to have all we need
   if ( opts.extract( 'g', gazetteer_name ) ){
     gazetteer_name = realpath( gazetteer_name );
     if ( !fill_gazet( gazetteer_name ) ){
@@ -338,7 +308,7 @@ int main(int argc, char * const argv[] ) {
   if ( mbt_setting.empty() ){
     throw setting_error( "settings", "tagger" );
   }
-  mbt_setting = "-s " + use_config.configDir() + mbt_setting + " -vcf" ;
+  mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
   MbtAPI *PosTagger = new MbtAPI( mbt_setting, mylog );
   if ( !PosTagger->isInit() ){
     cerr << "unable to initialize a POS tagger using:" << mbt_setting << endl;
@@ -381,7 +351,6 @@ int main(int argc, char * const argv[] ) {
   use_config.clearatt( "M", "NER" );
   use_config.clearatt( "n", "NER" );
   use_config.clearatt( "%", "NER" );
-  use_config.clearatt( "configDir", "global" );
 
   Configuration output_config = use_config;
 

@@ -51,9 +51,8 @@ static Configuration use_config;
 static Configuration default_config;
 
 void set_default_config(){
-  default_config.setatt( "configDir", string(SYSCONF_PATH) + "/frog/nld/", "global");
   default_config.setatt( "baseName", "chunkgen", "IOB" );
-  default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
+  default_config.setatt( "settings", "froggen.settings", "tagger" );
   default_config.setatt( "p", "dddwfWawa", "IOB" );
   default_config.setatt( "P", "chnppddwFawasss", "IOB" );
   default_config.setatt( "n", "10", "IOB" );
@@ -64,38 +63,6 @@ void set_default_config(){
 		    "IOB" );
   default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-chunker-nl", "IOB" );
 }
-
-void merge_cf_val( Configuration& out, const Configuration& in,
-		   const string& att, const string& section ) {
-  string val = out.lookUp( att, section );
-  if ( val.empty() ){
-    string in_val = in.lookUp( att, section );
-    if ( !in_val.empty() ){
-      out.setatt( att, in_val, section );
-    }
-  }
-}
-
-void merge_configs( Configuration& out, const Configuration& in ) {
-  // should be a member of Configuration Class that does this smartly
-  // for now: we just enrich 'out' with all 'in' stuff that is NOT
-  // already present in 'out'
-
-  // first the global stuff
-  merge_cf_val( out, in, "configDir", "global" );
-  // the default POS tagger
-  merge_cf_val( out, in, "settings", "tagger" );
-  // and the NER stuff
-  merge_cf_val( out, in, "baseName", "IOB" );
-  merge_cf_val( out, in, "p", "IOB" );
-  merge_cf_val( out, in, "P", "IOB" );
-  merge_cf_val( out, in, "n", "IOB" );
-  merge_cf_val( out, in, "M", "IOB" );
-  merge_cf_val( out, in, "%", "IOB" );
-  merge_cf_val( out, in, "timblOpts", "IOB" );
-  merge_cf_val( out, in, "set", "IOB" );
-}
-
 
 class setting_error: public std::runtime_error {
 public:
@@ -239,10 +206,14 @@ int main(int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
+  else if ( !configfile.empty() ){
+    outputdir = TiCC::dirname( configfile );
+  }
+
   if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "IOB" );
   }
-  merge_configs( use_config, default_config ); // to be sure to have all we need
+  use_config.merge( default_config ); // to be sure to have all we need
 
   // first check the validity of the configfile.
   // We are picky. ALL parameters are needed!
@@ -284,7 +255,7 @@ int main(int argc, char * const argv[] ) {
     throw setting_error( "settings", "tagger" );
   }
 
-  mbt_setting = "-s " + use_config.configDir() + mbt_setting + " -vcf" ;
+  mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
     cerr << "missing inputfile" << endl;
@@ -340,10 +311,6 @@ int main(int argc, char * const argv[] ) {
   frog_config.clearatt( "n", "IOB" );
   frog_config.clearatt( "%", "IOB" );
   frog_config.clearatt( "baseName", "IOB" );
-  frog_config.clearatt( "configDir", "global" );
-  if ( !outputdir.empty() ){
-    frog_config.setatt( "configDir", outputdir, "global" );
-  }
   frog_config.setatt( "settings", base_name + ".settings", "IOB" );
   frog_config.setatt( "version", "2.0", "IOB" );
   string cfg_out;

@@ -52,9 +52,6 @@ static Configuration use_config;
 static Configuration default_config;
 
 void set_default_config(){
-  //  default_config.setatt( "configDir",
-  //			 string(SYSCONF_PATH) + "/frog/nld/",
-  //			 "global");
   default_config.setatt( "baseName", "froggen", "global" );
   // tagger defaults
   default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
@@ -80,43 +77,6 @@ void set_default_config(){
   default_config.setatt( "configDir",
   			 string(SYSCONF_PATH) + "/ucto/",
   			 "tokenizer" );
-}
-
-void merge_cf_val( Configuration& out, const Configuration& in,
-		   const string& att, const string& section ) {
-  string val = out.lookUp( att, section );
-  if ( val.empty() ){
-    string in_val = in.lookUp( att, section );
-    if ( !in_val.empty() ){
-      out.setatt( att, in_val, section );
-    }
-  }
-}
-
-void merge_configs( Configuration& out, const Configuration& in ) {
-  // should be a member of Configuration Class that does this smartly
-  // for now: we just enrich 'out' with all 'in' stuff that is NOT
-  // already present in 'out'
-
-  // first the global stuff
-  //  merge_cf_val( out, in, "configDir", "global" );
-  merge_cf_val( out, in, "baseName", "global" );
-  // the default POS tagger
-  merge_cf_val( out, in, "settings", "tagger" );
-  merge_cf_val( out, in, "p", "tagger" );
-  merge_cf_val( out, in, "P", "tagger" );
-  merge_cf_val( out, in, "n", "tagger" );
-  merge_cf_val( out, in, "M", "tagger" );
-  merge_cf_val( out, in, "%", "tagger" );
-  merge_cf_val( out, in, "timblOpts", "tagger" );
-  merge_cf_val( out, in, "set", "tagger" );
-  // the lemmatizer
-  merge_cf_val( out, in, "particles", "mblem" );
-  merge_cf_val( out, in, "timblOpts", "mblem" );
-  merge_cf_val( out, in, "set", "mblem" );
-  // the tokenizer
-  merge_cf_val( out, in, "rulesFile", "tokenizer" );
-  merge_cf_val( out, in, "configDir", "tokenizer" );
 }
 
 class setting_error: public std::runtime_error {
@@ -517,7 +477,7 @@ int main( int argc, char * const argv[] ) {
     }
     cout << "using configuration: " << configfile << endl;
   }
-  merge_configs( use_config, default_config ); // to be sure to have all we need
+  use_config.merge( default_config ); // to be sure to have all we need
 
   if ( !opts.extract( 'b', base_name ) ){
     base_name = use_config.lookUp( "baseName", "global" );
@@ -618,7 +578,7 @@ int main( int argc, char * const argv[] ) {
   frog_config.clearatt( "M", "tagger" );
   frog_config.clearatt( "n", "tagger" );
   frog_config.clearatt( "%", "tagger" );
-  string frog_cfg = outputdir + "frog.cfg.template";
+  string frog_cfg = outputdir + "froggen.cfg.template";
   if ( frog_cfg == configfile ){
     frog_cfg += ".new";
   }

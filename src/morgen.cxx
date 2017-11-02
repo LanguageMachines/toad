@@ -70,31 +70,6 @@ void set_default_config(){
   			 "mbma" );
 }
 
-void merge_cf_val( TiCC::Configuration& out, const TiCC::Configuration& in,
-		   const string& att, const string& section ) {
-  string val = out.lookUp( att, section );
-  if ( val.empty() ){
-    string in_val = in.lookUp( att, section );
-    if ( !in_val.empty() ){
-      out.setatt( att, in_val, section );
-    }
-  }
-}
-
-void merge_configs( TiCC::Configuration& out, const TiCC::Configuration& in ) {
-  // should be a member of Configuration Class that does this smartly
-  // for now: we just enrich 'out' with all 'in' stuff that is NOT
-  // already present in 'out'
-
-  merge_cf_val( out, in, "baseName", "mbma" );
-  merge_cf_val( out, in, "timblOpts", "mbma" );
-  merge_cf_val( out, in, "set", "mbma" );
-  merge_cf_val( out, in, "clex_set", "mbma" );
-  merge_cf_val( out, in, "cgn_clex_main", "mbma" );
-  merge_cf_val( out, in, "cgn_clex_sub", "mbma" );
-  merge_cf_val( out, in, "cgnDir", "mbma" );
-}
-
 UnicodeString UnicodeFromS( const string& s, const string& enc = "UTF8" ){
   return UnicodeString( s.c_str(), s.length(), enc.c_str() );
 }
@@ -256,7 +231,7 @@ int main(int argc, char * const argv[] ) {
   if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "mbma" );
   }
-  merge_configs( use_config, default_config ); // to be sure to have all we need
+  use_config.merge( default_config ); // to be sure to have all we need
 
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
@@ -271,7 +246,7 @@ int main(int argc, char * const argv[] ) {
   base_name = use_config.getatt( "baseName", "mbma" );
 
   TiCC::Configuration frog_config = use_config;
-  frog_config.clearatt( "configDir", "global" );
+  //  frog_config.clearatt( "configDir", "global" );
   string inpname = names[0];
   string outname = outputdir + base_name + ".data";
   string treename = use_config.lookUp( "treeFile", "mbma" );
