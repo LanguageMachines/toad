@@ -1,3 +1,12 @@
+toad 0.4 2017-11-06
+[Ko van der Sloot]
+Major release:
+* Added modules te create new-style datafiles with enrichments for NER
+  and CHUNKER
+  Needs a recent frog too.
+* lots of code changes and fixes
+* make more use of recent additions to ticcutils.
+
 toad 0.3 2016-10-24
 [Ko van der Sloot]
 * first official release on Zenodo
