@@ -106,7 +106,8 @@ bool fill_gazet( const string& name ){
 
 void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
-	       const vector<string>& ner_file_tags ){
+	       const vector<string>& orig_ner_file_tags,
+	       bool override ){
   vector<string> words;
   vector<string> tags;
   for( const auto& tr : tagv ){
@@ -114,7 +115,12 @@ void spit_out( ostream& os,
     tags.push_back( tr.assignedTag() );
   }
 
-  vector<string> ner_tags = myNer.create_ner_list( words );
+  vector<string> gazet_tags = myNer.create_ner_list( words );
+  vector<string> ner_file_tags = orig_ner_file_tags;
+  if ( override ){
+    vector<double> dummy( gazet_tags.size() );
+    myNer.merge_override( ner_file_tags, dummy, gazet_tags, tags );
+  }
   string prevP = "_";
   string prevN = "_";
   for ( size_t i=0; i < words.size(); ++i ){
@@ -126,10 +132,10 @@ void spit_out( ostream& os,
     else {
       line += "_\t";
     }
-    line += prevN + "\t" + ner_tags[i] + "\t";
-    prevN = ner_tags[i];
+    line += prevN + "\t" + gazet_tags[i] + "\t";
+    prevN = gazet_tags[i];
     if ( i < words.size() - 1 ){
-      line += ner_tags[i+1] + "\t";
+      line += gazet_tags[i+1] + "\t";
     }
     else {
       line += "_\t";
@@ -148,12 +154,13 @@ void spit_out( ostream& os,
 
 void create_train_file( MbtAPI *tagger,
 			const string& inpname,
-			const string& outname ){
+			const string& outname,
+			bool override ){
   ofstream os( outname );
   ifstream is( inpname );
   string line;
   string blob;
-  vector<string> ner_tags;
+  vector<string> ner_file_tags; // store the tags as specified in the input
   size_t HeartBeat=0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
@@ -163,7 +170,7 @@ void create_train_file( MbtAPI *tagger,
     if ( line.empty() ) {
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-	spit_out( os, tagv, ner_tags );
+	spit_out( os, tagv, ner_file_tags, override );
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
 	}
@@ -172,7 +179,7 @@ void create_train_file( MbtAPI *tagger,
 	  cout.flush();
 	}
 	blob.clear();
-	ner_tags.clear();
+	ner_file_tags.clear();
       }
       continue;
     }
@@ -182,16 +189,16 @@ void create_train_file( MbtAPI *tagger,
       exit(EXIT_FAILURE);
     }
     blob += parts[0] + "\n";
-    ner_tags.push_back( parts[1] );
+    ner_file_tags.push_back( parts[1] );
   }
   if ( !blob.empty() ){
     vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-    spit_out( os, tagv, ner_tags );
+    spit_out( os, tagv, ner_file_tags, override );
   }
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVg:X","version");
+  TiCC::CL_Options opts("b:O:c:hVg:X","gazeteer:,help,version,override");
   try {
     opts.parse_args( argc, argv );
   }
@@ -203,7 +210,8 @@ int main(int argc, char * const argv[] ) {
   string configfile;
   string base_name;
   string gazetteer_name;
-  if ( opts.extract( 'h' ) ){
+  bool override = false;
+  if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
   }
@@ -237,19 +245,20 @@ int main(int argc, char * const argv[] ) {
     use_config.setatt( "baseName", base_name, "NER" );
   }
   use_config.merge( default_config ); // to be sure to have all we need
-  if ( opts.extract( 'g', gazetteer_name ) ){
+  if ( opts.extract( 'g', gazetteer_name )
+       || opts.extract( "gazeteer", gazetteer_name ) ){
     gazetteer_name = realpath( gazetteer_name );
     if ( !fill_gazet( gazetteer_name ) ){
       exit( EXIT_FAILURE );
     }
   }
   else {
-    cerr << "missing gazetteer option (-g)" << endl;
-    usage( opts.prog_name() );
-    exit(EXIT_FAILURE);
+    cerr << "WARNING: missing gazetteer option (-g). " << endl;
+    cerr << "Are u sure ?" << endl;
   }
+  override = opts.extract( "override" );
 
-  // get all required options from the merged the config
+  // get all required options from the merged config
   // normally these are all there now, so no exceptions then
 
   string ner_set_name = use_config.lookUp( "set", "NER" );
@@ -298,7 +307,13 @@ int main(int argc, char * const argv[] ) {
   if ( mbt_setting.empty() ){
     throw setting_error( "settings", "tagger" );
   }
-  mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
+  string use_dir = use_config.configDir();
+  if ( use_dir.empty() ){
+    mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
+  }
+  else {
+    mbt_setting = "-s " + use_dir + mbt_setting + " -vcf" ;
+  }
   MbtAPI *PosTagger = new MbtAPI( mbt_setting, mylog );
   if ( !PosTagger->isInit() ){
     cerr << "unable to initialize a POS tagger using:" << mbt_setting << endl;
@@ -310,7 +325,7 @@ int main(int argc, char * const argv[] ) {
 
   cout << "Start enriching: " << inpname << " with POS tags"
        << " (every dot represents 100 tagged sentences)" << endl;
-  create_train_file( PosTagger, inpname, outname );
+  create_train_file( PosTagger, inpname, outname, override );
   cout << endl << "Created a trainingfile: " << outname << endl;
 
   string taggercommand = "-E " + outname
