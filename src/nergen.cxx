@@ -119,7 +119,7 @@ void spit_out( ostream& os,
   vector<string> ner_file_tags = orig_ner_file_tags;
   if ( override ){
     vector<double> dummy( gazet_tags.size() );
-    myNer.merge_override( ner_file_tags, dummy, gazet_tags, tags );
+    myNer.merge_override( ner_file_tags, dummy, gazet_tags, false, tags );
   }
   string prevP = "_";
   string prevN = "_";
