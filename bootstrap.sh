@@ -1,6 +1,3 @@
-# $Id: bootstrap.sh 16619 2013-10-17 12:42:02Z sloot $
-# $URL: https://ilk.uvt.nl/svn/sources/Frog/trunk/bootstrap.sh $
-
 # bootstrap - script to bootstrap the distribution rolling engine
 
 # usage:
@@ -96,4 +93,3 @@ AUTOMAKE=automake ACLOCAL=aclocal autoreconf --install \
 # aclocal-1.9 \
 #     && automake-1.9 --add-missing --verbose --gnu \
 #     && autoconf
-

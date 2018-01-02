@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015 - 2017
+  Copyright (c) 2015 - 2018
   CLST Radboud University
 
   This file is part of toad
@@ -161,7 +161,7 @@ void Test( istream& in, bool deep ){
 
 int main(int argc, char *argv[]) {
   std::ios_base::sync_with_stdio(false);
-  cerr << "mbma_tester " << VERSION << " (c) LaMa 1998 - 2017" << endl;
+  cerr << "mbma_tester " << VERSION << " (c) LaMa 1998 - 2018" << endl;
   cerr << "Language Machine Group, Radboud University" << endl;
   TiCC::CL_Options Opts("Vt:d:hc:","version,deep-morph");
   try {
