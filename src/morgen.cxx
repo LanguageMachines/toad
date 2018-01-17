@@ -46,7 +46,6 @@
 
 using namespace std;
 
-const int HISTORY = 20;
 const int LEFT = 6;
 const int RIGHT = 6;
 
