@@ -35,7 +35,7 @@ matrix:
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         sudo apt-get update;
-        sudo apt-get install pkg-config autoconf-archive autotools-dev libicu-dev libxml2-dev libbz2-dev zlib1g-dev libtar libboost-dev libboost-regex-dev;
+        sudo apt-get install pkg-config autoconf-archive autotools-dev libicu-dev libxml2-dev libbz2-dev zlib1g-dev libtar libboost-dev libboost-regex-dev libexttextcat-dev;
       fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         brew update;
@@ -46,6 +46,7 @@ before_install:
         brew outdated || brew install bzip2;
         brew outdated || brew install zlib;
         brew install libtar;
+        brew install libtextcat;
         brew outdated boost || brew upgrade boost;
         brew install llvm;
         export PATH="/usr/local/opt/llvm/bin:$PATH";
