@@ -8,7 +8,7 @@ branches:
   only:
     - master
 
-    notifications:
+notifications:
   irc:
     channels:
       - "irc.uvt.nl#gitlama"
