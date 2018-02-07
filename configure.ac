@@ -8,18 +8,10 @@ AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 
-if test x"${CXXFLAGS+set}" = xset; then
-  # the user set CXXFLAGS; don't override it.
-  cxx_flags_were_set=true
-else
-  cxx_flags_were_set=false
-fi
-if $cxx_flags_were_set; then
-  CXXFLAGS=$CXXFLAGS
-fi
-
 # Checks for programs.
 AC_PROG_CXX( [g++] )
+
+# use libtool
 AC_PROG_LIBTOOL
 LT_INIT
 
@@ -30,11 +22,13 @@ AC_SUBST([SYSCONFDIR])
 AC_LANG([C++])
 
 AC_OPENMP
-if test "x$ac_cv_prog_cxx_openmp" != "xunsupported"; then
-   CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
-   AC_DEFINE(HAVE_OPENMP, 1 , Define to 1 if you have OpenMP )
-else
-   AC_MSG_NOTICE(We don't have OpenMP. Multithreaded operation is disabled)
+if test "x$ac_cv_prog_cxx_openmp" != "x"; then
+  if test "x$ac_cv_prog_cxx_openmp" != "xunsupported"; then
+    CXXFLAGS="$CXXFLAGS $OPENMP_CXXFLAGS"
+    AC_DEFINE([HAVE_OPENMP], [1] , [Define to 1 if you have OpenMP] )
+  else
+    AC_MSG_NOTICE([We don't have OpenMP. Multithreaded operation is disabled])
+  fi
 fi
 
 # Checks for header files.
@@ -46,6 +40,8 @@ if test "x$PKG_CONFIG_PATH" = x; then
 else
     export PKG_CONFIG_PATH="$prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
 fi
+
+AC_OSX_PKG( [icu4c] )
 
 PKG_CHECK_MODULES([ICU], [icu-uc >= 50 icu-io] )
 CXXFLAGS="$CXXFLAGS $ICU_CFLAGS"
