@@ -95,6 +95,10 @@ void usage( const string& name ){
        << "\t\t        'ner-catn<tab> filen'" << endl
        << "\t\t were every file1 .. filen is a list of space separated names"
        << endl;
+  cerr << "--override\t override O NER tags with those derived from the gazeteers," << endl
+       << "\t\t so ONLY when there is NO CONFLICT" << endl;
+  cerr << "--bootstrap\t override ALL NER tags with those derived from the gazeteers." << endl
+       << "\t\t UNCONDITIONALLY. Creates a new trainfile for nergen, and stops then. " << endl;
 }
 
 
@@ -107,7 +111,8 @@ bool fill_gazet( const string& name ){
 void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
 	       const vector<string>& orig_ner_file_tags,
-	       bool override ){
+	       bool override,
+	       bool unconditional ){
   vector<string> words;
   vector<string> tags;
   for( const auto& tr : tagv ){
@@ -119,29 +124,38 @@ void spit_out( ostream& os,
   vector<string> ner_file_tags = orig_ner_file_tags;
   if ( override ){
     vector<double> dummy( gazet_tags.size() );
-    myNer.merge_override( ner_file_tags, dummy, gazet_tags, false, tags );
+    myNer.merge_override( ner_file_tags, dummy, gazet_tags, unconditional, tags );
   }
-  string prevP = "_";
-  string prevN = "_";
-  for ( size_t i=0; i < words.size(); ++i ){
-    string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
-    prevP = tags[i];
-    if ( i < words.size() - 1 ){
-      line += tags[i+1] + "\t";
+  if ( unconditional ){
+    for ( size_t i=0; i < words.size(); ++i ){
+      string line = words[i] + "\t";
+      line += ner_file_tags[i];
+      os << line << endl;
     }
-    else {
-      line += "_\t";
+  }
+  else {
+    string prevP = "_";
+    string prevN = "_";
+    for ( size_t i=0; i < words.size(); ++i ){
+      string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
+      prevP = tags[i];
+      if ( i < words.size() - 1 ){
+	line += tags[i+1] + "\t";
+      }
+      else {
+	line += "_\t";
+      }
+      line += prevN + "\t" + gazet_tags[i] + "\t";
+      prevN = gazet_tags[i];
+      if ( i < words.size() - 1 ){
+	line += gazet_tags[i+1] + "\t";
+      }
+      else {
+	line += "_\t";
+      }
+      line += ner_file_tags[i];
+      os << line << endl;
     }
-    line += prevN + "\t" + gazet_tags[i] + "\t";
-    prevN = gazet_tags[i];
-    if ( i < words.size() - 1 ){
-      line += gazet_tags[i+1] + "\t";
-    }
-    else {
-      line += "_\t";
-    }
-    line += ner_file_tags[i];
-    os << line << endl;
   }
   if ( EOS_MARK == "\n" ){
     // avoid spurious newlines!
@@ -155,7 +169,8 @@ void spit_out( ostream& os,
 void create_train_file( MbtAPI *tagger,
 			const string& inpname,
 			const string& outname,
-			bool override ){
+			bool override,
+			bool unconditional=false ){
   ofstream os( outname );
   ifstream is( inpname );
   string line;
@@ -170,7 +185,7 @@ void create_train_file( MbtAPI *tagger,
     if ( line.empty() ) {
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-	spit_out( os, tagv, ner_file_tags, override );
+	spit_out( os, tagv, ner_file_tags, override, unconditional );
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
 	}
@@ -193,12 +208,12 @@ void create_train_file( MbtAPI *tagger,
   }
   if ( !blob.empty() ){
     vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-    spit_out( os, tagv, ner_file_tags, override );
+    spit_out( os, tagv, ner_file_tags, override, unconditional );
   }
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVg:X","gazeteer:,help,version,override");
+  TiCC::CL_Options opts("b:O:c:hVg:X","gazeteer:,help,version,override,bootstrap");
   try {
     opts.parse_args( argc, argv );
   }
@@ -211,6 +226,7 @@ int main(int argc, char * const argv[] ) {
   string base_name;
   string gazetteer_name;
   bool override = false;
+  bool unconditional = false;
   if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
@@ -257,7 +273,10 @@ int main(int argc, char * const argv[] ) {
     cerr << "Are u sure ?" << endl;
   }
   override = opts.extract( "override" );
-
+  unconditional = opts.extract( "bootstrap" );
+  if ( unconditional ){
+    override = true;
+  }
   // get all required options from the merged config
   // normally these are all there now, so no exceptions then
 
@@ -320,14 +339,25 @@ int main(int argc, char * const argv[] ) {
     exit( EXIT_FAILURE );
   }
   string inpname = names[0];
-  string outname = outputdir + base_name + ".data";
+  string outname = outputdir + base_name;
+  if ( unconditional ){
+    outname += ".boosted";
+  }
+  else {
+    outname += ".data";
+  }
   string settings_name = outputdir + base_name + ".settings";
 
   cout << "Start enriching: " << inpname << " with POS tags"
        << " (every dot represents 100 tagged sentences)" << endl;
-  create_train_file( PosTagger, inpname, outname, override );
-  cout << endl << "Created a trainingfile: " << outname << endl;
-
+  create_train_file( PosTagger, inpname, outname, override, unconditional );
+  if ( unconditional ){
+    cout << endl << "Created a new bootstrapped nergen data file: " << outname << endl;
+    return EXIT_SUCCESS;
+  }
+  else {
+    cout << endl << "Created a trainingfile: " << outname << endl;
+  }
   string taggercommand = "-E " + outname
     + " -s " + settings_name
     + " -p " + p_pat + " -P " + P_pat
