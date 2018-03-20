@@ -1,0 +1,141 @@
+.TH nergen 1 "2018 march 20"
+
+.SH NAME
+nergen \- A Generator for Frogs NER
+.SH SYNOPSIS
+nergen [options]
+
+nergen -c config\-file -g gazeteer\-file -O output\-dir <tagged-corpus>
+
+nergen -c config\-file -g gazeteer\-file -O output]-dir --bootstrap <corpus>
+
+.SH DESCRIPTION
+nergen will convert a datafile containing words and NER\-tags into a
+complete dataset to run the Frog NER.
+
+With the
+.B --bootstrap
+option an untagged corpus can be bootstrapped, using gazeteer information.
+
+.SH OPTIONS
+
+.BR \-c " <configfile>"
+.RS
+Specify a configuration file in Frog style. (required, except when
+.B --bootstrap
+is used.
+The parameters found here will be used for POS tagging, to improve te accuracy
+of Frog. This file also serves as a template to create a new Frog config
+file with a [[NER]] data section.
+.RE
+
+.BR \-g " <gazeteer>"
+.RS
+Specify a gazeteer datafile.
+.nf
+The format of such a file is:
+.nf
+class1<tab>file\-name1
+class2<tab>file\-name2
+
+every 'file\-name' should give a list of entities for that class.
+
+An entity can be a single word, or a sequence. Every entity should be on a
+separate line.
+
+Example, from the file geonames-nl.ner
+Aa
+Aabeek
+Aadam Wihelmina
+Aadam Wilhelmina Hotel
+Aadorp
+Aaftinkbrug
+
+When this is refered in the gazeteer files as:
+loc	geonames-nl.ner
+
+then for instance 'het Aadam Wilhelmina Hotel in Aadorp' migth be tagged as:
+het/O Aadam/B-loc Wilhelmina/I-loc Hotel/I-loc in/O Aadorp/B-loc
+
+.RE
+
+.BR <tagged\-corpus>
+.RS
+This is the main input file for
+.B nergen.
+It should consist of tagged sentences in the format:
+.nf
+word <WS> NER\-tag
+.nf
+Where WS is whitespace like spaces or tab(s).
+
+Sentences must be separated by the symbol
+.I <utt>
+on a separate line. Or at least one empty line, example:
+.nf
+Is	O
+dat	O
+Jan	B-per
+de	I-per
+Bruin	I-per
+?	O
+<utt>
+De	O
+is	O
+in	O
+Noord	B-loc
+Brabant	I-loc
+.	O
+<utt>
+.fi
+.RE
+
+.BR \-\-override
+.RS
+When NER tags are present in the inputfile, they will be SOMETIMES be replaced
+by tags derived from the gazeteers. The conditions are:
+
+\- The tag to be replaced is a 'O' tag
+
+\- The POS tag is either
+.B SPEC
+or
+.B N
+
+.RE
+
+
+.BR \-O " <outputdir>"
+.RS
+send all output to 'outputdir' instead of the current directory.
+This option is highly recommened while nergen will generated a bunch of files.
+.RE
+
+.BR \-\-bootstrap
+.RS
+When NER tags are present in the inputfile, they will be discarded and replaced
+by tags derived from the gazeteers.
+With this option, a new trainfile for nergen is created.
+To use i, nergen has o be run again on this file.
+.RE
+
+.BR \-h
+.RS
+give some help
+.RE
+
+.BR \-V " or " \-\-version
+.RS
+show version info
+.RE
+
+.SH BUGS
+likely
+
+.SH AUTHORS
+Ko van der Sloot K.vanderSloot@let.ru.nl
+
+Antal van den Bosch Timbl@uvt.nl
+
+.SH SEE ALSO
+.BR ucto (1) frog (1)

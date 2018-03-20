@@ -99,6 +99,9 @@ void usage( const string& name ){
        << "\t\t so ONLY when there is NO CONFLICT" << endl;
   cerr << "--bootstrap\t override ALL NER tags with those derived from the gazeteers." << endl
        << "\t\t UNCONDITIONALLY. Creates a new trainfile for nergen, and stops then. " << endl;
+  cerr << "--running When using --bootstrap, you can specifythis, to signal an input file" << endl
+       << "\t\t with 'running text'. A simple file with one sentence per line." << endl
+       << "\t\t Otherwise a 2 column tagged file is assumed ." << endl;
 }
 
 
