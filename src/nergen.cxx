@@ -112,7 +112,7 @@ void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
 	       const vector<string>& orig_ner_file_tags,
 	       bool override,
-	       bool unconditional ){
+	       bool bootstrap ){
   vector<string> words;
   vector<string> tags;
   for( const auto& tr : tagv ){
@@ -124,9 +124,9 @@ void spit_out( ostream& os,
   vector<string> ner_file_tags = orig_ner_file_tags;
   if ( override ){
     vector<double> dummy( gazet_tags.size() );
-    myNer.merge_override( ner_file_tags, dummy, gazet_tags, unconditional, tags );
+    myNer.merge_override( ner_file_tags, dummy, gazet_tags, bootstrap, tags );
   }
-  if ( unconditional ){
+  if ( bootstrap ){
     for ( size_t i=0; i < words.size(); ++i ){
       string line = words[i] + "\t";
       line += ner_file_tags[i];
@@ -166,11 +166,54 @@ void spit_out( ostream& os,
   }
 }
 
+string to_tag( const string& label ){
+  vector<string> parts = TiCC::split_at( label, "+" );
+  if ( parts.size() > 1 ){
+    // undecided
+    return "O";
+  }
+  else {
+    return parts[0];
+  }
+}
+
+void boot_out( ostream& os,
+	       const vector<string>& words ){
+  vector<string> gazet_tags = myNer.create_ner_list( words );
+  bool inside = false;
+  string prev_tag;
+  for ( size_t i=0; i < words.size(); ++i ){
+    string line = words[i] + "\t";
+    string tag = to_tag( gazet_tags[i] );
+    if ( tag == "O" ){
+      inside = false;
+    }
+    else {
+      inside = ( tag == prev_tag );
+      if ( inside ){
+	line += "I-";
+      }
+      else {
+	line += "B-";
+      }
+      prev_tag = tag;
+    }
+    line += tag;
+    os << line << endl;
+  }
+  if ( EOS_MARK == "\n" ){
+    // avoid spurious newlines!
+    os << endl;
+  }
+  else {
+    os << EOS_MARK << endl;
+  }
+}
+
 void create_train_file( MbtAPI *tagger,
 			const string& inpname,
 			const string& outname,
-			bool override,
-			bool unconditional=false ){
+			bool override ){
   ofstream os( outname );
   ifstream is( inpname );
   string line;
@@ -185,7 +228,7 @@ void create_train_file( MbtAPI *tagger,
     if ( line.empty() ) {
       if ( !blob.empty() ){
 	vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-	spit_out( os, tagv, ner_file_tags, override, unconditional );
+	spit_out( os, tagv, ner_file_tags, override, false );
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
 	}
@@ -208,12 +251,61 @@ void create_train_file( MbtAPI *tagger,
   }
   if ( !blob.empty() ){
     vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
-    spit_out( os, tagv, ner_file_tags, override, unconditional );
+    spit_out( os, tagv, ner_file_tags, override, false );
+  }
+}
+
+void create_boot_file( const string& inpname,
+		       const string& outname,
+		       bool running=false ){
+  ofstream os( outname );
+  ifstream is( inpname );
+  string line;
+  string blob;
+  size_t HeartBeat=0;
+  while ( getline( is, line ) ){
+    if ( line == "<utt>" ){
+      EOS_MARK = "<utt>";
+      line.clear();
+    }
+    if ( line.empty() ) {
+      if ( !blob.empty() ){
+	vector<string> words = split( blob );
+	boot_out( os, words );
+	if ( ++HeartBeat % 8000 == 0 ) {
+	  cout << endl;
+	}
+	if ( HeartBeat % 100 == 0 ) {
+	  cout << ".";
+	  cout.flush();
+	}
+	blob.clear();
+      }
+      continue;
+    }
+    if ( running ){
+      vector<string> words = split( line );
+      boot_out( os, words );
+    }
+    else {
+      vector<string> parts;
+      if ( TiCC::split( line, parts) == 2 ){
+	blob += parts[0] + " ";
+      }
+      else {
+	cerr << "DOOD: " << line << endl;
+	exit(EXIT_FAILURE);
+      }
+    }
+  }
+  if ( !blob.empty() ){
+    vector<string> words = split( blob );
+    boot_out( os, words );
   }
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hVg:X","gazeteer:,help,version,override,bootstrap");
+  TiCC::CL_Options opts("b:O:c:hVg:X","gazeteer:,help,version,override,bootstrap,running");
   try {
     opts.parse_args( argc, argv );
   }
@@ -226,7 +318,8 @@ int main(int argc, char * const argv[] ) {
   string base_name;
   string gazetteer_name;
   bool override = false;
-  bool unconditional = false;
+  bool bootstrap = false;
+  bool running = false;
   if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
@@ -273,9 +366,11 @@ int main(int argc, char * const argv[] ) {
     cerr << "Are u sure ?" << endl;
   }
   override = opts.extract( "override" );
-  unconditional = opts.extract( "bootstrap" );
-  if ( unconditional ){
-    override = true;
+  bootstrap = opts.extract( "bootstrap" );
+  running = opts.extract( "running" );
+  if ( running && !bootstrap ){
+    cerr << "option --running only allowed for --bootstrap" << endl;
+    exit(EXIT_FAILURE);
   }
   // get all required options from the merged config
   // normally these are all there now, so no exceptions then
@@ -322,6 +417,14 @@ int main(int argc, char * const argv[] ) {
     cerr << "only 1 inputfile is allowed" << endl;
     exit(EXIT_FAILURE);
   }
+  string inpname = names[0];
+  string outname = outputdir + base_name;
+  if ( bootstrap ){
+    outname += ".boosted";
+    create_boot_file( inpname, outname, running );
+    cout << endl << "Created a new bootstrapped nergen data file: " << outname << endl;
+    return EXIT_SUCCESS;
+  }
   string mbt_setting = use_config.lookUp( "settings", "tagger" );
   if ( mbt_setting.empty() ){
     throw setting_error( "settings", "tagger" );
@@ -338,26 +441,12 @@ int main(int argc, char * const argv[] ) {
     cerr << "unable to initialize a POS tagger using:" << mbt_setting << endl;
     exit( EXIT_FAILURE );
   }
-  string inpname = names[0];
-  string outname = outputdir + base_name;
-  if ( unconditional ){
-    outname += ".boosted";
-  }
-  else {
-    outname += ".data";
-  }
+  outname += ".data";
   string settings_name = outputdir + base_name + ".settings";
-
   cout << "Start enriching: " << inpname << " with POS tags"
        << " (every dot represents 100 tagged sentences)" << endl;
-  create_train_file( PosTagger, inpname, outname, override, unconditional );
-  if ( unconditional ){
-    cout << endl << "Created a new bootstrapped nergen data file: " << outname << endl;
-    return EXIT_SUCCESS;
-  }
-  else {
-    cout << endl << "Created a trainingfile: " << outname << endl;
-  }
+  create_train_file( PosTagger, inpname, outname, override );
+  cout << endl << "Created a trainingfile: " << outname << endl;
   string taggercommand = "-E " + outname
     + " -s " + settings_name
     + " -p " + p_pat + " -P " + P_pat
