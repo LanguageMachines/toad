@@ -1,0 +1,7 @@
+testen met:
+
+nergen -g ner.data --bootstrap -O test1 --running corpus.running
+
+of
+
+nergen -g ner.data --bootstrap -O test1 corpus.data
