@@ -481,7 +481,8 @@ int main(int argc, char * const argv[] ) {
 
   Configuration output_config = use_config;
 
-  output_config.setatt( "settings", base_name + ".settings", "NER" );
+  string setting_name = TiCC::realpath(outputdir) + "/" + base_name + ".settings";
+  output_config.setatt( "settings", setting_name, "NER" );
   output_config.setatt( "known_ners", gazetteer_name, "NER" );
   output_config.setatt( "version", "2.0", "NER" );
 
