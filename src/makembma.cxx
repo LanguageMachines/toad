@@ -48,10 +48,6 @@ using namespace std;
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
 
-UnicodeString UnicodeStringFromS( const string& s, const string& enc = "UTF8" ){
-  return UnicodeString( s.c_str(), s.length(), enc.c_str() );
-}
-
 void usage(){
   cerr << "makembma [-i inputfile] [-o outputfile]"
        << endl;
@@ -71,10 +67,10 @@ std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
   return os;
 }
 
-void spitOut( ostream& os, const UnicodeString& word,
+void spitOut( ostream& os, const icu::UnicodeString& word,
 	      vector<set<string> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
-    UnicodeString out;
+    icu::UnicodeString out;
     // left context
     for ( int j=0; j<LEFT; j++){
       if ((i-(LEFT-j))<0)
@@ -97,7 +93,7 @@ void spitOut( ostream& os, const UnicodeString& word,
     // class
     set<string>::const_iterator it = morphemes[i].begin();
     while ( it != morphemes[i].end() ){
-      out += UnicodeStringFromS( *it );
+      out += TiCC::UnicodeFromUTF8( *it );
       ++it;
       if ( it != morphemes[i].end() )
 	out += "|";
@@ -144,7 +140,7 @@ int main(int argc, char * const argv[] ) {
   string line;
   vector<set<string> > morphemes;
   morphemes.resize(250);
-  UnicodeString prevword;
+  icu::UnicodeString prevword;
   while ( getline(bron, line ) ){
     if ( line.empty() ){
 	continue;
@@ -155,7 +151,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    UnicodeString word = UnicodeStringFromS( parts[0] );
+    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;

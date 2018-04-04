@@ -140,7 +140,7 @@ void Test( istream& in, bool deep ){
     vector<string> parts;
     if ( TiCC::split( line, parts ) < 2 )
       continue;
-    UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
+    icu::UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
     uWord.toLower();
     parts.erase(parts.begin());
     vector<Rule *> rules = myMbma.execute( uWord, parts );

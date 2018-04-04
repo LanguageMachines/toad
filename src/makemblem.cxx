@@ -43,11 +43,11 @@
 
 using namespace std;
 
-UnicodeString UTF8ToUnicode( const string& s ){
-  return UnicodeString::fromUTF8( s );
+icu::UnicodeString UTF8ToUnicode( const string& s ){
+  return icu::UnicodeString::fromUTF8( s );
 }
 
-string UnicodeToUTF8( const UnicodeString& s ){
+string UnicodeToUTF8( const icu::UnicodeString& s ){
   string result;
   s.toUTF8String(result);
   return result;
@@ -142,11 +142,11 @@ int main( int argc, char * const argv[] ) {
   else {
     cerr << " without tag translations " << endl;
   }
-  vector<UnicodeString> classes;
-  vector<UnicodeString> classcodes;
-  UnicodeString wordform;
-  UnicodeString lemma;
-  UnicodeString tag;
+  vector<icu::UnicodeString> classes;
+  vector<icu::UnicodeString> classcodes;
+  icu::UnicodeString wordform;
+  icu::UnicodeString lemma;
+  icu::UnicodeString tag;
 
   string line;
   if ( doTrans ){
@@ -164,8 +164,8 @@ int main( int argc, char * const argv[] ) {
     }
   }
 
-  UnicodeString lastinstance;
-  UnicodeString outLine;
+  icu::UnicodeString lastinstance;
+  icu::UnicodeString outLine;
 
   while ( getline(bron, line ) ){
     vector<string>parts;
@@ -184,8 +184,8 @@ int main( int argc, char * const argv[] ) {
     if ( debug )
       cerr << "start with wordform " << wordform << endl;
 
-    UnicodeString memwordform = wordform;
-    UnicodeString prefixed;
+    icu::UnicodeString memwordform = wordform;
+    icu::UnicodeString prefixed;
     /* find out whether there may be a prefix or infix */
     if ( tag.indexOf("WW(vd") >= 0 ){
       int gepos = wordform.indexOf("ge");
@@ -194,7 +194,7 @@ int main( int argc, char * const argv[] ) {
 	   bepos != -1 ) {
 	if ( debug)
 	  cerr << "alert - " << wordform << " " << lemma << endl;
-	UnicodeString edit = wordform;
+	icu::UnicodeString edit = wordform;
 	//
 	// A bit tricky here
 	// We remove the first 'ge' OR the first 'be'
@@ -231,8 +231,8 @@ int main( int argc, char * const argv[] ) {
 	}
       }
     }
-    UnicodeString deleted;
-    UnicodeString inserted;
+    icu::UnicodeString deleted;
+    icu::UnicodeString inserted;
     int ident=0;
     while ( ident < wordform.length() &&
 	    ident < lemma.length() &&
@@ -255,7 +255,7 @@ int main( int argc, char * const argv[] ) {
 	   << ", insert " << inserted
 	   << ", delete " << deleted << endl;
     }
-    UnicodeString instance;
+    icu::UnicodeString instance;
     // print instance
     for ( int i=0; i<HISTORY; i++) {
       int j= memwordform.length()-HISTORY+i;
@@ -286,7 +286,7 @@ int main( int argc, char * const argv[] ) {
       while ( j < classes.size() && ( tag != classes[j] ) )
 	j++;
       if ( j< classes.size() ){
-	outLine += UnicodeString( classcodes[j] );
+	outLine += icu::UnicodeString( classcodes[j] );
       }
       else {
 	outLine += "?";

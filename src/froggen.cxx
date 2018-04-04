@@ -112,7 +112,7 @@ void usage( const string& name ){
 }
 
 void fill_lemmas( istream& is,
-		  multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& lems,
+		  multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& lems,
 		  const string& enc ){
   string line;
   size_t linecount = 0;
@@ -127,14 +127,14 @@ void fill_lemmas( istream& is,
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
-    vector<UnicodeString> uparts(3);
+    vector<icu::UnicodeString> uparts(3);
     uparts[0] = UnicodeFromEnc( parts[0], enc ); // the word
     uparts[1] = UnicodeFromEnc( parts[1], enc ); // the lemma
     uparts[2] = UnicodeFromEnc( parts[2], enc ); // the POS tag
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
       // so a completely new word
-      it = lems.insert( make_pair( uparts[0], map<UnicodeString,set<UnicodeString>>() ) );
+      it = lems.insert( make_pair( uparts[0], map<icu::UnicodeString,set<icu::UnicodeString>>() ) );
       it->second[uparts[1]].insert( uparts[2] );
     }
     else {
@@ -151,7 +151,7 @@ void fill_lemmas( istream& is,
   }
 }
 
-UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data, const UnicodeString& word, const UnicodeString& tag ){
+icu::UnicodeString lemma_lookup( multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data, const icu::UnicodeString& word, const icu::UnicodeString& tag ){
   auto it = data.lower_bound( word );
   if ( it == data.upper_bound( word ) ){
     // word not found
@@ -228,24 +228,24 @@ void fill_particles( const string& line ){
   }
 }
 
-void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data,
+void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data,
 			     const string& filename ){
   ofstream os( filename );
   if ( !os ){
     cerr << "couldn't create mblem datafile" << filename << endl;
     exit( EXIT_FAILURE );
   }
-  UnicodeString outLine;
+  icu::UnicodeString outLine;
   for ( const auto& it : data ){
-    UnicodeString wordform = it.first;
-    UnicodeString safeInstance;
+    icu::UnicodeString wordform = it.first;
+    icu::UnicodeString safeInstance;
     if ( !outLine.isEmpty() ){
       string out = UnicodeToUTF8(outLine);
       out.erase( out.length()-1 );
       os << out << endl;
       outLine.remove();
     }
-    UnicodeString instance;
+    icu::UnicodeString instance;
     // format instance
     for ( int i=0; i<HISTORY; i++) {
       int j= wordform.length()-HISTORY+i;
@@ -278,11 +278,11 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
       outLine = instance;
     }
     for ( const auto& it2 : it.second ){
-      UnicodeString lemma  = it2.first;
+      icu::UnicodeString lemma  = it2.first;
       for ( auto const& tag : it2.second ){
 	outLine += tag;
-	UnicodeString prefixed;
-	UnicodeString thisform = wordform;
+	icu::UnicodeString prefixed;
+	icu::UnicodeString thisform = wordform;
 	//  find out whether there may be a prefix or infix particle
 	for( const auto it : particles ){
 	  if ( !prefixed.isEmpty() )
@@ -291,7 +291,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
 	  if ( tag.indexOf(it.first.c_str()) >= 0 ){
 	    // the POS tag matches, so potentially yes
 	    int part_pos = -1;
-	    UnicodeString part;
+	    icu::UnicodeString part;
 	    for ( const auto& p : it.second ){
 	      // loop over potential particles.
 	      part_pos = thisform.indexOf(p.c_str());
@@ -301,7 +301,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
 		  cerr << "alert - " << thisform << " " << lemma << endl;
 		  cerr << "matched " << part << " position: " << part_pos << endl;
 		}
-		UnicodeString edit = thisform;
+		icu::UnicodeString edit = thisform;
 		//
 		// A bit tricky here
 		// We remove the first particle
@@ -343,8 +343,8 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, se
 	  }
 	}
 
-	UnicodeString deleted;
-	UnicodeString inserted;
+	icu::UnicodeString deleted;
+	icu::UnicodeString inserted;
 	int ident=0;
 	while ( ident < thisform.length() &&
 		ident < lemma.length() &&
@@ -398,7 +398,7 @@ void train_mblem( const Configuration& config,
 }
 
 void create_lemmatizer( const Configuration& config,
-			const multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>>& data,
+			const multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>>& data,
 			const string& mblem_tree_file ){
   string mblem_data_file = mblem_tree_file + ".data";
   cout << "create a lemmatizer into: " << mblem_tree_file << endl;
@@ -407,7 +407,7 @@ void create_lemmatizer( const Configuration& config,
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
-		 const multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>>& data ){
+		 const multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>>& data ){
   for ( const auto& word : data ){
     int num = tokenizer->tokenizeLine( word.first );
     if ( num != 1 ){
@@ -526,7 +526,7 @@ int main( int argc, char * const argv[] ) {
     fill_particles( mblem_particles );
   }
 
-  multimap<UnicodeString,map<UnicodeString,set<UnicodeString>>> data;
+  multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>> data;
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
   ifstream corpus( corpusname);

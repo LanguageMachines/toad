@@ -84,8 +84,8 @@ void usage(){
 }
 
 void check_word( const string& word, bool doMor ){
-  UnicodeString us( word.c_str() );
-  UnicodeString ls = us;
+  icu::UnicodeString us( word.c_str() );
+  icu::UnicodeString ls = us;
   ls.toLower();
   if ( us != ls )
     return;
@@ -173,7 +173,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()

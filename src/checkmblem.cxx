@@ -102,7 +102,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
     lexicon.insert( TiCC::UnicodeToUTF8( word ) );
   }
@@ -145,8 +145,8 @@ int main(int argc, char * const argv[] ) {
       continue;
     }
     string word = parts[0];
-    UnicodeString us( word.c_str() );
-    UnicodeString ls = us;
+    icu::UnicodeString us( word.c_str() );
+    icu::UnicodeString ls = us;
     ls.toLower();
     if ( us != ls ){
       // skip uppercases stuff
