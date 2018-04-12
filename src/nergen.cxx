@@ -43,16 +43,15 @@
 #include "config.h"
 
 using namespace std;
-using namespace TiCC;
 
-LogStream mylog(cerr);
+TiCC::LogStream mylog(cerr);
 
 static NERTagger myNer(&mylog);
 
 string EOS_MARK = "\n";
 
-static Configuration default_config; // sane defaults
-static Configuration use_config;     // the config we gonna use
+static TiCC::Configuration default_config; // sane defaults
+static TiCC::Configuration use_config;     // the config we gonna use
 
 void set_default_config(){
   default_config.setatt( "baseName", "nergen", "NER" );
@@ -273,7 +272,7 @@ void create_boot_file( const string& inpname,
     }
     if ( line.empty() ) {
       if ( !blob.empty() ){
-	vector<string> words = split( blob );
+	vector<string> words = TiCC::split( blob );
 	boot_out( os, words );
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
@@ -287,7 +286,7 @@ void create_boot_file( const string& inpname,
       continue;
     }
     if ( running ){
-      vector<string> words = split( line );
+      vector<string> words = TiCC::split( line );
       boot_out( os, words );
     }
     else {
@@ -302,7 +301,7 @@ void create_boot_file( const string& inpname,
     }
   }
   if ( !blob.empty() ){
-    vector<string> words = split( blob );
+    vector<string> words = TiCC::split( blob );
     boot_out( os, words );
   }
 }
@@ -345,7 +344,7 @@ int main(int argc, char * const argv[] ) {
   if ( !outputdir.empty() ){
     if ( outputdir[outputdir.length()-1] != '/' )
       outputdir += "/";
-    if ( !isDir( outputdir ) && !createPath( outputdir ) ){
+    if ( !TiCC::isDir( outputdir ) && !TiCC::createPath( outputdir ) ){
       cerr << "output dir not usable: " << outputdir << endl;
       exit(EXIT_FAILURE);
     }
@@ -356,10 +355,13 @@ int main(int argc, char * const argv[] ) {
   if ( opts.extract( 'b', base_name ) ){
     use_config.setatt( "baseName", base_name, "NER" );
   }
+  cerr << "cfdir=" << use_config.configDir() << endl;
+  cerr << "default cfdir=" << default_config.configDir() << endl;
   use_config.merge( default_config ); // to be sure to have all we need
+  cerr << "na merge cfdir=" << use_config.configDir() << endl;
   if ( opts.extract( 'g', gazetteer_name )
        || opts.extract( "gazeteer", gazetteer_name ) ){
-    gazetteer_name = realpath( gazetteer_name );
+    gazetteer_name = TiCC::realpath( gazetteer_name );
     if ( !fill_gazet( gazetteer_name ) ){
       exit( EXIT_FAILURE );
     }
@@ -479,7 +481,7 @@ int main(int argc, char * const argv[] ) {
   use_config.clearatt( "n", "NER" );
   use_config.clearatt( "%", "NER" );
 
-  Configuration output_config = use_config;
+  TiCC::Configuration output_config = use_config;
 
   string setting_name = TiCC::realpath(outputdir) + "/" + base_name + ".settings";
   output_config.setatt( "settings", setting_name, "NER" );
