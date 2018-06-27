@@ -100,7 +100,7 @@ void usage( const string& name ){
        << "\t <utt>" << endl;
   cerr << " The lemmalist MUST be in the same format, but single lines only," << endl
        << " without <utt> markers: 'Word-1<tab>Lemma-1<tab>POS-tag-1' " << endl;
-  cerr << "-c 'fonfig' an optional configfile. Use only to override the system defaults" << endl
+  cerr << "-c 'config' an optional configfile. Use only to override the system defaults" << endl
        << "\t\for the Tagger, the Lemmatizer and the Tokenizer" << endl;
   cerr << "-O 'outputdir' Store all files in 'outputdir' (Higly recommended)" << endl;
   cerr << "-e 'encoding' Normally we handle UTF-8, but other encodings are supported." << endl;
