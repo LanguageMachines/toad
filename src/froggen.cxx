@@ -120,9 +120,8 @@ void fill_lemmas( istream& is,
     linecount++;
     if ( line == "<utt>" )
       continue;
-    vector<string> parts;
-    size_t num = TiCC::split( line, parts );
-    if ( num != 3 ){
+    vector<string> parts = TiCC::split_at( line, "\t" );
+    if ( parts.size() != 3 ){
       cerr << "wrong inputline on line " << linecount << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
@@ -181,9 +180,8 @@ void create_tagger( const Configuration& config,
       os << line << endl;
     }
     else {
-      vector<string> parts;
-      size_t num = TiCC::split( line, parts );
-      if ( num == 3 ){
+      vector<string> parts = TiCC::split_at( line, "\t" );
+      if ( parts.size() == 3 ){
 	os << parts[0] << "\t" << parts[2] << endl;
       }
       else {
@@ -215,11 +213,10 @@ void create_tagger( const Configuration& config,
 map<string,set<string>> particles;
 void fill_particles( const string& line ){
   cout << "start filling particle info from " << line << endl;
-  vector<string> parts;
-  TiCC::split_at_first_of( line, parts, "[] " );
+  vector<string> parts = TiCC::split_at_first_of( line, "[] " );
   for ( const auto& part : parts ){
-    vector<string> v;
-    if ( 2 != TiCC::split_at( part, v, "/" ) ){
+    vector<string> v = TiCC::split_at( part, "/" );
+    if ( v.size() != 2 ){
       cerr << "error parsing particles line: " << line << endl;
       cerr << "at : " << part << endl;
       exit( EXIT_FAILURE );
