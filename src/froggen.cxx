@@ -31,6 +31,7 @@
 #include <set>
 #include <string>
 #include "ticcutils/StringOps.h"
+#include "ticcutils/PrettyPrint.h"
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
 #include "ticcutils/Configuration.h"
@@ -112,7 +113,7 @@ void usage( const string& name ){
 }
 
 void fill_lemmas( istream& is,
-		  multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& lems,
+		  multimap<icu::UnicodeString, map<icu::UnicodeString, map<icu::UnicodeString,size_t>>>& lems,
 		  const string& enc ){
   string line;
   size_t linecount = 0;
@@ -133,18 +134,18 @@ void fill_lemmas( istream& is,
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
       // so a completely new word
-      it = lems.insert( make_pair( uparts[0], map<icu::UnicodeString,set<icu::UnicodeString>>() ) );
-      it->second[uparts[1]].insert( uparts[2] );
+      it = lems.insert( make_pair( uparts[0], map<icu::UnicodeString,map<icu::UnicodeString,size_t>>() ) );
+      ++it->second[uparts[1]][uparts[2]];
     }
     else {
       // word seen before. But with this lemma?
       auto it2 = it->second.find( uparts[1] );
       if ( it2 == it->second.end() ){
 	// so this lemma not yet done for this word
-	it->second[uparts[1]].insert( uparts[2] );
+	++it->second[uparts[1]][uparts[2]];
       }
       else {
-	it2->second.insert( uparts[2] );
+	++it2->second[uparts[2]];
       }
     }
   }
@@ -202,7 +203,7 @@ void create_tagger( const Configuration& config,
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt
     + " -n " + n_opt;
-  taggercommand += " -DLogSilent"; // shut up
+  taggercommand += " -DLogSilent --tabbed"; // shut up
   cout << "start tagger: " << taggercommand << endl;
   cout << "this may take several minutes, depending on the corpus size."
        << endl;
@@ -225,7 +226,7 @@ void fill_particles( const string& line ){
   }
 }
 
-void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data,
+void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::UnicodeString, map<icu::UnicodeString, size_t>>>& data,
 			     const string& filename ){
   ofstream os( filename );
   if ( !os ){
@@ -274,9 +275,34 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
       safeInstance = instance;
       outLine = instance;
     }
+    multimap<size_t, multimap<icu::UnicodeString,icu::UnicodeString>,std::greater<size_t>> sorted;
     for ( const auto& it2 : it.second ){
-      icu::UnicodeString lemma  = it2.first;
-      for ( auto const& tag : it2.second ){
+      for ( const auto& it3: it2.second ){
+	if ( false ){
+	  cerr << "it3.first:" << it3.first << endl;
+	  cerr << "it.first:" << it.first << endl;
+	  cerr << "it2.first:" << it2.first << endl;
+	}
+	multimap<icu::UnicodeString,icu::UnicodeString> mm;
+	mm.insert(make_pair(it3.first,it2.first));
+	sorted.insert(make_pair(it3.second,mm));
+      }
+    }
+    if ( debug ){
+      cerr << "sorted: " << endl;
+      for ( const auto& it : sorted ){
+	cerr << it.second << " (" << it.first << " )" << endl;
+      }
+    }
+    for ( const auto& it2 : sorted ){
+      for( const auto& it3 : it2.second ){
+	icu::UnicodeString lemma  = it3.second;
+	using TiCC::operator<<;
+	if ( debug ){
+	  cerr << "LEMMA = " << lemma << endl;
+	  cerr << "tags = " << it3.first << endl;
+	}
+	icu::UnicodeString tag = it3.first;
 	outLine += tag;
 	icu::UnicodeString prefixed;
 	icu::UnicodeString thisform = wordform;
@@ -395,7 +421,7 @@ void train_mblem( const Configuration& config,
 }
 
 void create_lemmatizer( const Configuration& config,
-			const multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>>& data,
+			const multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>>& data,
 			const string& mblem_tree_file ){
   string mblem_data_file = mblem_tree_file + ".data";
   cout << "create a lemmatizer into: " << mblem_tree_file << endl;
@@ -404,7 +430,7 @@ void create_lemmatizer( const Configuration& config,
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
-		 const multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>>& data ){
+		 const multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>>& data ){
   for ( const auto& word : data ){
     int num = tokenizer->tokenizeLine( word.first );
     if ( num != 1 ){
@@ -523,17 +549,41 @@ int main( int argc, char * const argv[] ) {
     fill_particles( mblem_particles );
   }
 
-  multimap<icu::UnicodeString,map<icu::UnicodeString,set<icu::UnicodeString>>> data;
+  multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>> data;
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
   ifstream corpus( corpusname);
   fill_lemmas( corpus, data, encoding );
+  if ( debug ){
+    cerr << "current data" << endl;
+    for ( const auto it1 : data ){
+      cerr << it1.first;
+      for( const auto& it2 : it1.second ){
+	cerr << "\t" << it2.first << endl;
+	for( const auto& it3 : it2.second ){
+	  cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
+	}
+      }
+    }
+  }
   cout << "done" << endl;
   if ( !lemma_name.empty() ){
     cout << "start reading extra lemmas from: " << lemma_name << endl;
     ifstream is( lemma_name);
     fill_lemmas( is, data, encoding );
     cout << "done" << endl;
+  }
+  if ( debug ){
+    cerr << "current data" << endl;
+    for ( const auto it1 : data ){
+      cerr << it1.first;
+      for( const auto& it2 : it1.second ){
+	cerr << "\t" << it2.first << endl;
+	for( const auto& it3 : it2.second ){
+	  cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
+	}
+      }
+    }
   }
 
   string tag_full_name = outputdir + base_name;
