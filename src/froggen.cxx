@@ -206,7 +206,8 @@ void create_tagger( const Configuration& config,
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt
     + " -n " + n_opt;
-  taggercommand += " -DLogSilent --tabbed"; // shut up
+  //  taggercommand += " -DLogSilent --tabbed"; // shut up AND tel MBT to only use tabs as separators. Needs recent mbt.
+  taggercommand += " -DLogSilent"; // shut up
   cout << "start tagger: " << taggercommand << endl;
   cout << "this may take several minutes, depending on the corpus size."
        << endl;
