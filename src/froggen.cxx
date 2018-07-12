@@ -46,6 +46,7 @@
 
 using namespace std;
 using namespace TiCC;
+using TiCC::operator<<;
 
 int debug = 0;
 const int HISTORY = 20;
@@ -151,7 +152,9 @@ void fill_lemmas( istream& is,
   }
 }
 
-icu::UnicodeString lemma_lookup( multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data, const icu::UnicodeString& word, const icu::UnicodeString& tag ){
+icu::UnicodeString lemma_lookup( multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data,
+				 const icu::UnicodeString& word,
+				 const icu::UnicodeString& tag ){
   auto it = data.lower_bound( word );
   if ( it == data.upper_bound( word ) ){
     // word not found
@@ -278,11 +281,6 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
     multimap<size_t, multimap<icu::UnicodeString,icu::UnicodeString>,std::greater<size_t>> sorted;
     for ( const auto& it2 : it.second ){
       for ( const auto& it3: it2.second ){
-	if ( false ){
-	  cerr << "it3.first:" << it3.first << endl;
-	  cerr << "it.first:" << it.first << endl;
-	  cerr << "it2.first:" << it2.first << endl;
-	}
 	multimap<icu::UnicodeString,icu::UnicodeString> mm;
 	mm.insert(make_pair(it3.first,it2.first));
 	sorted.insert(make_pair(it3.second,mm));
@@ -296,13 +294,12 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
     }
     for ( const auto& it2 : sorted ){
       for( const auto& it3 : it2.second ){
+	icu::UnicodeString tag = it3.first;
 	icu::UnicodeString lemma  = it3.second;
-	using TiCC::operator<<;
 	if ( debug ){
 	  cerr << "LEMMA = " << lemma << endl;
-	  cerr << "tags = " << it3.first << endl;
+	  cerr << "tag = " << tag << endl;
 	}
-	icu::UnicodeString tag = it3.first;
 	outLine += tag;
 	icu::UnicodeString prefixed;
 	icu::UnicodeString thisform = wordform;
@@ -550,6 +547,10 @@ int main( int argc, char * const argv[] ) {
   }
 
   multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>> data;
+  // WTF is this?
+  // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
+  // this structure is probably overly complex. redesign is needed.
+  // e.g. on output we have te re-sort it to make it usable.
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
   ifstream corpus( corpusname);
