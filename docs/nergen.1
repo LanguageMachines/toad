@@ -1,4 +1,4 @@
-.TH nergen 1 "2018 march 20"
+.TH nergen 1 "2018 juli 13"
 
 .SH NAME
 nergen \- A Generator for Frogs NER
@@ -38,7 +38,7 @@ The format of such a file is:
 class1<tab>file\-name1
 class2<tab>file\-name2
 
-every 'file\-name' should give a list of entities for that class.
+Every 'file\-name' should give a list of entities for that class.
 
 An entity can be a single word, or a sequence. Every entity should be on a
 separate line.
@@ -55,6 +55,7 @@ When this is refered in the gazeteer files as:
 loc	geonames-nl.ner
 
 then for instance 'het Aadam Wilhelmina Hotel in Aadorp' migth be tagged as:
+
 het/O Aadam/B-loc Wilhelmina/I-loc Hotel/I-loc in/O Aadorp/B-loc
 
 .RE
@@ -116,7 +117,7 @@ This option is highly recommened while nergen will generated a bunch of files.
 When NER tags are present in the inputfile, they will be discarded and replaced
 by tags derived from the gazeteers.
 With this option, a new trainfile for nergen is created.
-To use i, nergen has o be run again on this file.
+To use it, nergen has to be run again on this file.
 .RE
 
 .BR \-h
@@ -138,4 +139,5 @@ Ko van der Sloot K.vanderSloot@let.ru.nl
 Antal van den Bosch Timbl@uvt.nl
 
 .SH SEE ALSO
-.BR ucto (1) frog (1)
+.BR ucto (1)
+.BR frog (1)
