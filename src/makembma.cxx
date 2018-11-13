@@ -127,8 +127,10 @@ int main(int argc, char * const argv[] ) {
   }
 
   ostream *os;
-  if ( outname.empty() )
+  bool os_is_cout = outname.empty();
+  if ( os_is_cout ){
     os = &cout;
+  }
   else {
     os = new ofstream( outname );
     if ( !os ){
@@ -178,6 +180,9 @@ int main(int argc, char * const argv[] ) {
   }
   if ( !prevword.isEmpty() ){
     spitOut( *os, prevword, morphemes );
+  }
+  if ( !os_is_cout ){
+    delete os;
   }
   return 0;
 }

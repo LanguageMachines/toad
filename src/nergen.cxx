@@ -182,17 +182,12 @@ string to_tag( const string& label ){
 void boot_out( ostream& os,
 	       const vector<string>& words ){
   vector<string> gazet_tags = myNer.create_ner_list( words );
-  bool inside = false;
   string prev_tag;
   for ( size_t i=0; i < words.size(); ++i ){
     string line = words[i] + "\t";
     string tag = to_tag( gazet_tags[i] );
-    if ( tag == "O" ){
-      inside = false;
-    }
-    else {
-      inside = ( tag == prev_tag );
-      if ( inside ){
+    if ( tag != "O" ){
+      if ( tag == prev_tag ) {
 	line += "I-";
       }
       else {
