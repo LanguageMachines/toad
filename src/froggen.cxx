@@ -45,6 +45,7 @@
 #include "config.h"
 
 using namespace std;
+using namespace	icu;
 using namespace TiCC;
 using TiCC::operator<<;
 
@@ -114,7 +115,7 @@ void usage( const string& name ){
 }
 
 void fill_lemmas( istream& is,
-		  multimap<icu::UnicodeString, map<icu::UnicodeString, map<icu::UnicodeString,size_t>>>& lems,
+		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
 		  const string& enc ){
   string line;
   size_t linecount = 0;
@@ -128,14 +129,14 @@ void fill_lemmas( istream& is,
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
-    vector<icu::UnicodeString> uparts(3);
+    vector<UnicodeString> uparts(3);
     uparts[0] = UnicodeFromEnc( parts[0], enc ); // the word
     uparts[1] = UnicodeFromEnc( parts[1], enc ); // the lemma
     uparts[2] = UnicodeFromEnc( parts[2], enc ); // the POS tag
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
       // so a completely new word
-      it = lems.insert( make_pair( uparts[0], map<icu::UnicodeString,map<icu::UnicodeString,size_t>>() ) );
+      it = lems.insert( make_pair( uparts[0], map<UnicodeString,map<UnicodeString,size_t>>() ) );
       ++it->second[uparts[1]][uparts[2]];
     }
     else {
@@ -152,9 +153,9 @@ void fill_lemmas( istream& is,
   }
 }
 
-icu::UnicodeString lemma_lookup( multimap<icu::UnicodeString, map<icu::UnicodeString, set<icu::UnicodeString>>>& data,
-				 const icu::UnicodeString& word,
-				 const icu::UnicodeString& tag ){
+UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data,
+				 const UnicodeString& word,
+				 const UnicodeString& tag ){
   auto it = data.lower_bound( word );
   if ( it == data.upper_bound( word ) ){
     // word not found
@@ -230,24 +231,24 @@ void fill_particles( const string& line ){
   }
 }
 
-void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::UnicodeString, map<icu::UnicodeString, size_t>>>& data,
+void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, map<UnicodeString, size_t>>>& data,
 			     const string& filename ){
   ofstream os( filename );
   if ( !os ){
     cerr << "couldn't create mblem datafile" << filename << endl;
     exit( EXIT_FAILURE );
   }
-  icu::UnicodeString outLine;
+  UnicodeString outLine;
   for ( const auto& it : data ){
-    icu::UnicodeString wordform = it.first;
-    icu::UnicodeString safeInstance;
+    UnicodeString wordform = it.first;
+    UnicodeString safeInstance;
     if ( !outLine.isEmpty() ){
       string out = UnicodeToUTF8(outLine);
       out.erase( out.length()-1 );
       os << out << endl;
       outLine.remove();
     }
-    icu::UnicodeString instance;
+    UnicodeString instance;
     // format instance
     for ( int i=0; i<HISTORY; i++) {
       int j= wordform.length()-HISTORY+i;
@@ -279,10 +280,10 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
       safeInstance = instance;
       outLine = instance;
     }
-    multimap<size_t, multimap<icu::UnicodeString,icu::UnicodeString>,std::greater<size_t>> sorted;
+    multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> sorted;
     for ( const auto& it2 : it.second ){
       for ( const auto& it3: it2.second ){
-	multimap<icu::UnicodeString,icu::UnicodeString> mm;
+	multimap<UnicodeString,UnicodeString> mm;
 	mm.insert(make_pair(it3.first,it2.first));
 	sorted.insert(make_pair(it3.second,mm));
       }
@@ -295,15 +296,15 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
     }
     for ( const auto& it2 : sorted ){
       for( const auto& it3 : it2.second ){
-	icu::UnicodeString tag = it3.first;
-	icu::UnicodeString lemma  = it3.second;
+	UnicodeString tag = it3.first;
+	UnicodeString lemma  = it3.second;
 	if ( debug ){
 	  cerr << "LEMMA = " << lemma << endl;
 	  cerr << "tag = " << tag << endl;
 	}
 	outLine += tag;
-	icu::UnicodeString prefixed;
-	icu::UnicodeString thisform = wordform;
+	UnicodeString prefixed;
+	UnicodeString thisform = wordform;
 	//  find out whether there may be a prefix or infix particle
 	for( const auto it : particles ){
 	  if ( !prefixed.isEmpty() )
@@ -312,7 +313,7 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
 	  if ( tag.indexOf(it.first.c_str()) >= 0 ){
 	    // the POS tag matches, so potentially yes
 	    int part_pos = -1;
-	    icu::UnicodeString part;
+	    UnicodeString part;
 	    for ( const auto& p : it.second ){
 	      // loop over potential particles.
 	      part_pos = thisform.indexOf(p.c_str());
@@ -322,7 +323,7 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
 		  cerr << "alert - " << thisform << " " << lemma << endl;
 		  cerr << "matched " << part << " position: " << part_pos << endl;
 		}
-		icu::UnicodeString edit = thisform;
+		UnicodeString edit = thisform;
 		//
 		// A bit tricky here
 		// We remove the first particle
@@ -364,8 +365,8 @@ void create_mblem_trainfile( const multimap<icu::UnicodeString, map<icu::Unicode
 	  }
 	}
 
-	icu::UnicodeString deleted;
-	icu::UnicodeString inserted;
+	UnicodeString deleted;
+	UnicodeString inserted;
 	int ident=0;
 	while ( ident < thisform.length() &&
 		ident < lemma.length() &&
@@ -419,7 +420,7 @@ void train_mblem( const Configuration& config,
 }
 
 void create_lemmatizer( const Configuration& config,
-			const multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>>& data,
+			const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data,
 			const string& mblem_tree_file ){
   string mblem_data_file = mblem_tree_file + ".data";
   cout << "create a lemmatizer into: " << mblem_tree_file << endl;
@@ -428,7 +429,7 @@ void create_lemmatizer( const Configuration& config,
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
-		 const multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>>& data ){
+		 const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data ){
   for ( const auto& word : data ){
     int num = tokenizer->tokenizeLine( word.first );
     if ( num != 1 ){
@@ -547,7 +548,7 @@ int main( int argc, char * const argv[] ) {
     fill_particles( mblem_particles );
   }
 
-  multimap<icu::UnicodeString,map<icu::UnicodeString,map<icu::UnicodeString,size_t>>> data;
+  multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>> data;
   // WTF is this?
   // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
   // this structure is probably overly complex. redesign is needed.

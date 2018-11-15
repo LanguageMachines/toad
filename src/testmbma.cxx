@@ -44,6 +44,7 @@
 #include "frog/mbma_mod.h"
 
 using namespace std;
+using namespace	icu;
 using namespace Timbl;
 using namespace TiCC;
 
@@ -140,7 +141,7 @@ void Test( istream& in, bool deep ){
     vector<string> parts;
     if ( TiCC::split( line, parts ) < 2 )
       continue;
-    icu::UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
+    UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
     uWord.toLower();
     parts.erase(parts.begin());
     vector<Rule *> rules = myMbma.execute( uWord, parts );

@@ -46,6 +46,7 @@
 #include "frog/mbma_mod.h"
 
 using namespace std;
+using namespace	icu;
 
 TiCC::LogStream *theErrLog = new TiCC::LogStream(cerr);
 
@@ -84,8 +85,8 @@ void usage(){
 }
 
 void check_word( const string& word, bool doMor ){
-  icu::UnicodeString us( word.c_str() );
-  icu::UnicodeString ls = us;
+  UnicodeString us( word.c_str() );
+  UnicodeString ls = us;
   ls.toLower();
   if ( us != ls )
     return;
@@ -173,7 +174,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       continue;
     }
-    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()

@@ -45,6 +45,7 @@
 #include "config.h"
 
 using namespace std;
+using namespace	icu;
 
 const int LEFT = 6;
 const int RIGHT = 6;
@@ -74,10 +75,10 @@ void usage( const string& name ){
        << endl;
 }
 
-void spitOut( ostream& os, const icu::UnicodeString& word,
+void spitOut( ostream& os, const UnicodeString& word,
 	      vector<set<string> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
-    icu::UnicodeString out;
+    UnicodeString out;
     // left context
     for ( int j=0; j<LEFT; j++){
       if ((i-(LEFT-j))<0)
@@ -125,7 +126,7 @@ void create_instance_file( const string& inpname, const string& outname ){
   string line;
   vector<set<string> > morphemes;
   morphemes.resize(250);
-  icu::UnicodeString prevword;
+  UnicodeString prevword;
   while ( getline(bron, line ) ){
     if ( line.empty() ){
 	continue;
@@ -136,7 +137,7 @@ void create_instance_file( const string& inpname, const string& outname ){
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;

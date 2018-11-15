@@ -43,6 +43,8 @@
 #include "frog/mbma_mod.h"
 
 using namespace std;
+using namespace	icu;
+
 #define LEFT 6
 #define RIGHT 6
 
@@ -67,10 +69,10 @@ std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
   return os;
 }
 
-void spitOut( ostream& os, const icu::UnicodeString& word,
+void spitOut( ostream& os, const UnicodeString& word,
 	      vector<set<string> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
-    icu::UnicodeString out;
+    UnicodeString out;
     // left context
     for ( int j=0; j<LEFT; j++){
       if ((i-(LEFT-j))<0)
@@ -142,7 +144,7 @@ int main(int argc, char * const argv[] ) {
   string line;
   vector<set<string> > morphemes;
   morphemes.resize(250);
-  icu::UnicodeString prevword;
+  UnicodeString prevword;
   while ( getline(bron, line ) ){
     if ( line.empty() ){
 	continue;
@@ -153,7 +155,7 @@ int main(int argc, char * const argv[] ) {
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    icu::UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;
