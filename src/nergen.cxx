@@ -129,7 +129,11 @@ void spit_out( ostream& os,
     for ( const auto& it : orig_ner_file_tags ){
       orig_ners.push_back( make_pair( it, 1.0 ) );
     }
-    myNer.merge_override( orig_ners, gazet_tags, bootstrap, tags );
+    vector<tc_pair> gazet_ners;
+    for ( const auto& it : gazet_tags ){
+      gazet_ners.push_back( make_pair( it, 1.0 ) );
+    }
+    myNer.merge_override( orig_ners, gazet_ners, bootstrap, tags );
   }
   if ( bootstrap ){
     for ( size_t i=0; i < words.size(); ++i ){
@@ -359,14 +363,17 @@ int main(int argc, char * const argv[] ) {
   cerr << "na merge cfdir=" << use_config.configDir() << endl;
   if ( opts.extract( 'g', gazetteer_name )
        || opts.extract( "gazeteer", gazetteer_name ) ){
-    gazetteer_name = TiCC::realpath( gazetteer_name );
-    if ( !fill_gazet( gazetteer_name ) ){
-      exit( EXIT_FAILURE );
-    }
   }
   else {
+    gazetteer_name = use_config.lookUp( "known_ners", "NER" );
+  }
+  gazetteer_name = TiCC::realpath( gazetteer_name );
+  if ( gazetteer_name.empty() ){
     cerr << "WARNING: missing gazetteer option (-g). " << endl;
     cerr << "Are u sure ?" << endl;
+  }
+  if ( !fill_gazet( gazetteer_name ) ){
+    exit( EXIT_FAILURE );
   }
   override = opts.extract( "override" );
   bootstrap = opts.extract( "bootstrap" );
