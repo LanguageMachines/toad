@@ -125,8 +125,11 @@ void spit_out( ostream& os,
   vector<string> gazet_tags = myNer.create_ner_list( words );
   vector<string> ner_file_tags = orig_ner_file_tags;
   if ( override ){
-    vector<double> dummy( gazet_tags.size() );
-    myNer.merge_override( ner_file_tags, dummy, gazet_tags, bootstrap, tags );
+    vector<tc_pair> orig_ners;
+    for ( const auto& it : orig_ner_file_tags ){
+      orig_ners.push_back( make_pair( it, 1.0 ) );
+    }
+    myNer.merge_override( orig_ners, gazet_tags, bootstrap, tags );
   }
   if ( bootstrap ){
     for ( size_t i=0; i < words.size(); ++i ){
