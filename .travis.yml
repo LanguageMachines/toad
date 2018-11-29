@@ -1,5 +1,5 @@
 sudo: required
-dist: xenial
+dist: trusty
 
 group: edge
 
@@ -23,14 +23,19 @@ matrix:
   include:
     - os: linux
       compiler: gcc
+      env:
+        - SCAN=echo
 
     - os: linux
       compiler: clang++
       env:
+        - SCAN=scan-build
         - OPENMPFLAG=--disable-openmp
 
     - os: osx
       compiler: clang
+      env:
+        - SCAN=echo
 
 before_install:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
@@ -113,6 +118,8 @@ before_install:
 install:
     - bash bootstrap.sh
     - ./configure $OPENMPFLAG
+    - cppcheck --enable=all --quiet --error-exitcode=0 .
+    - $SCAN --status-bugs make
     - make
     - sudo make install
 script:
