@@ -93,48 +93,88 @@ public:
 void usage( const string& name ){
   cerr << name << " -T taggedcorpus [-l lemmalist] [-c configfile] [-e encoding] [-O outputdir]"
        << endl;
-  cerr << name << " trains a Tagger AND a Lemmatizer on the 'taggedcorpus' " << endl
-       << "  optionally the lemmatizer is also trained on 'lemmalist'."
+  cerr << name << " trains a Tagger AND a Lemmatizer on the 'taggedcorpus', " << endl
+       << "optionally the lemmatizer is also trained on 'lemmalist'."
        << endl;
-  cerr << "  the tagged corpus MUST contain tagged sentences in the format: " << endl
+  cerr << "  the lemmalist MUST contain tagged words in the format: " << endl
+       << "\t Word-1<tab>Lemma-1<tab>POS-tag-1" << endl
+       << "\t  ..." << endl
+       << "\t Word-n<tab>Lemma-n<tab>POS-tag-n" << endl;
+  cerr << "  The corpus format may be:" << endl
        << "\t Word-1<tab>Lemma-1<tab>POS-tag-1" << endl
        << "\t  ..." << endl
        << "\t Word-n<tab>Lemma-n<tab>POS-tag-n" << endl
-       << "\t <utt>" << endl;
-  cerr << " The lemmalist MUST be in the same format, but single lines only," << endl
-       << " without <utt> markers: 'Word-1<tab>Lemma-1<tab>POS-tag-1' " << endl;
+       << "\t <utt>" << endl
+       << "  OR: " << endl
+       << "\t Word-1<tab>POS-tag-1" << endl
+       << "\t  ..." << endl
+       << "\t Word-n<tab>POS-tag-n" << endl
+       << "\t <utt>" << endl
+       << "  With <utt> markers, to separate sentences. (use --eos to change)" << endl;
+  cerr << "--eos 'mark' use 'mark' to seperate sentences. Default '<utt>'" << endl
+       << "\t use EL to use an empty line as separator." << endl;
   cerr << "-c 'config' an optional configfile. Use only to override the system defaults" << endl
-       << "\t\for the Tagger, the Lemmatizer and the Tokenizer" << endl;
+       << "\t for the Tagger, the Lemmatizer and the Tokenizer" << endl;
   cerr << "-O 'outputdir' Store all files in 'outputdir' (Higly recommended)" << endl;
   cerr << "-e 'encoding' Normally we handle UTF-8, but other encodings are supported." << endl;
   cerr << "-t 'tokenizerfile' An ucto style rulesfile can be specified here." << endl
        << "\t It must include a full path!" << endl;
   cerr << "-b 'base' set the prefix for all generated files. (default 'froggen')" << endl;
+  cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
+  cerr<< "\t to validate." << endl;
   cerr << "-h This messages." << endl;
   cerr << "-v or --version Give version info." << endl;
 }
 
 void fill_lemmas( istream& is,
 		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
-		  const string& enc ){
+		  const set<string>& pos_tags,
+		  const string& enc,
+		  const string& eos_mark ){
   string line;
   size_t linecount = 0;
+  int count_2 = 0;
   while ( getline( is, line ) ){
     linecount++;
-    if ( line == "<utt>" )
+    if ( line.empty() ){
       continue;
+    }
+    if ( line == eos_mark ){
+      continue;
+    }
     vector<string> parts = TiCC::split_at( line, "\t" );
-    if ( parts.size() != 3 ){
+    if ( parts.size() == 2 ){
+      if ( ++count_2 == 4 ){
+	if (linecount == 4 ){
+	  return;
+	}
+	else {
+	  cerr << "wrong inputline on line " << linecount << " (confused)" << endl;
+	  exit( EXIT_FAILURE );
+	}
+      }
+      continue;
+    }
+    else if ( parts.size() != 3 ){
       cerr << "wrong inputline on line " << linecount << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
+    if ( !pos_tags.empty() ){
+      if ( pos_tags.find( parts[2] ) == pos_tags.end() ){
+	cerr << "unknown POS tag: " << parts[2] << " in line " << linecount
+	     << " '" << line << "'" << endl;
+	exit( EXIT_FAILURE );
+      }
+    }
+    cerr << "parts: " << parts[0] << "-" << parts[1] << "==" << parts[2] << endl;
     vector<UnicodeString> uparts(3);
     uparts[0] = UnicodeFromEnc( parts[0], enc ); // the word
     uparts[1] = UnicodeFromEnc( parts[1], enc ); // the lemma
     uparts[2] = UnicodeFromEnc( parts[2], enc ); // the POS tag
     auto it = lems.lower_bound( uparts[0] );
     if ( it == lems.upper_bound( uparts[0] ) ){
+      cerr << "new word: " << uparts[0] << endl;
       // so a completely new word
       it = lems.insert( make_pair( uparts[0], map<UnicodeString,map<UnicodeString,size_t>>() ) );
       ++it->second[uparts[1]][uparts[2]];
@@ -143,10 +183,12 @@ void fill_lemmas( istream& is,
       // word seen before. But with this lemma?
       auto it2 = it->second.find( uparts[1] );
       if ( it2 == it->second.end() ){
+	cerr << "next lemma " << uparts[1] << endl;
 	// so this lemma not yet done for this word
 	++it->second[uparts[1]][uparts[2]];
       }
       else {
+	cerr << "known word, lemma: " << uparts[2] << endl;
 	++it2->second[uparts[2]];
       }
     }
@@ -174,25 +216,46 @@ UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<Unico
 
 void create_tagger( const Configuration& config,
 		    const string& base_name,
-		    const string& corpus_name ){
+		    const string& corpus_name,
+		    const set<string>& pos_tags,
+		    const string& eos_mark ){
   cout << "create a tagger from: " << corpus_name << endl;
   ifstream corpus( corpus_name );
   string tag_data_name = base_name + ".data";
   ofstream os( tag_data_name );
   string line;
+  size_t line_count = 0;
   while ( getline( corpus, line ) ){
-    if ( line == "<utt>" ){
+    ++line_count;
+    if ( ( line.empty() && eos_mark == "EL" )
+	 || line == eos_mark ){
       os << line << endl;
     }
     else {
       vector<string> parts = TiCC::split_at( line, "\t" );
-      if ( parts.size() == 3 ){
-	os << parts[0] << "\t" << parts[2] << endl;
+      string word;
+      string pos;
+      if ( parts.size() == 2 ){
+	word = parts[0];
+	pos = parts[1];
+      }
+      else if ( parts.size() == 3 ){
+	word = parts[0];
+	pos = parts[2];
       }
       else {
-	cerr << "invalid input line: " << line << endl;
+	cerr << "invalid input line (" << line_count << "): '" << line
+	     << "'" << endl;
 	exit( EXIT_FAILURE );
       }
+      if ( !pos_tags.empty() ){
+	if ( pos_tags.find( pos ) == pos_tags.end() ){
+	  cerr << "unknown POS tag: " << pos << " in line " << line_count
+	       << " '" << line << "'" << endl;
+	  exit( EXIT_FAILURE );
+	}
+      }
+      os << word << "\t" << pos << endl;
     }
   }
   cout << "created an inputfile for the tagger: " << tag_data_name << endl;
@@ -216,8 +279,8 @@ void create_tagger( const Configuration& config,
   cout << "finished creating tagger" << endl;
 }
 
-map<string,set<string>> particles;
-void fill_particles( const string& line ){
+map<string,set<string>> fill_particles( const string& line ){
+  map<string,set<string>> result;
   cout << "start filling particle info from " << line << endl;
   vector<string> parts = TiCC::split_at_first_of( line, "[] " );
   for ( const auto& part : parts ){
@@ -227,11 +290,45 @@ void fill_particles( const string& line ){
       cerr << "at : " << part << endl;
       exit( EXIT_FAILURE );
     }
-    particles[v[0]].insert( v[1] );
+    result[v[0]].insert( v[1] );
   }
+  return result;
+}
+
+set<string> fill_postags( const string& pos_tags_file ){
+  set<string> result;
+  if ( !pos_tags_file.empty() ){
+    ifstream is( pos_tags_file );
+    string line;
+    size_t count = 0;
+    while ( getline( is, line ) ){
+      ++count;
+      if ( line.empty() ){
+	continue;
+      }
+      if ( line[0] == '#' ){
+	// comment
+	continue;
+      }
+      vector<string> v = TiCC::split( line );
+      if ( v.size() > 1 ){
+	result.insert( v[1] );
+      }
+      else {
+	cerr << "invalid line (" << count << ") in '" << pos_tags_file
+	     << "'" << endl;
+	cerr << "expected at least two words, with a POS tag as second" << endl;
+	cerr << "like: 'T105] N(soort,ev,dim,gen) vadertjes pijp'" << endl;
+	cerr << "but found: '" << line << "'" << endl;
+	exit( EXIT_FAILURE );
+      }
+    }
+  }
+  return result;
 }
 
 void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, map<UnicodeString, size_t>>>& data,
+			     const map<string,set<string>>& particles,
 			     const string& filename ){
   ofstream os( filename );
   if ( !os ){
@@ -421,10 +518,11 @@ void train_mblem( const Configuration& config,
 
 void create_lemmatizer( const Configuration& config,
 			const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data,
+			const map<string,set<string>>& particles,
 			const string& mblem_tree_file ){
   string mblem_data_file = mblem_tree_file + ".data";
   cout << "create a lemmatizer into: " << mblem_tree_file << endl;
-  create_mblem_trainfile( data, mblem_data_file );
+  create_mblem_trainfile( data, particles, mblem_data_file );
   train_mblem( config, mblem_data_file, mblem_tree_file );
 }
 
@@ -447,7 +545,7 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","help,version");
+  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","help,version,postags:,eos:");
   try {
     opts.parse_args( argc, argv );
   }
@@ -511,6 +609,8 @@ int main( int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
+  string eos_mark = "<utt>";
+  opts.extract( "eos", eos_mark );
   bool t_opt = opts.extract( 't', tokfile );
   if ( !t_opt ){
     string tokdir = use_config.getatt( "configDir", "tokenizer" );
@@ -544,10 +644,13 @@ int main( int argc, char * const argv[] ) {
   }
   opts.extract( 'e', encoding );
   string mblem_particles = use_config.lookUp( "particles", "mblem" );
+  map<string,set<string>> particles;
   if ( !mblem_particles.empty() ){
-    fill_particles( mblem_particles );
+    particles = fill_particles( mblem_particles );
   }
-
+  string pos_tags_file;
+  opts.extract( "postags", pos_tags_file );
+  set<string> pos_tags = fill_postags( pos_tags_file );
   multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>> data;
   // WTF is this?
   // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
@@ -556,7 +659,7 @@ int main( int argc, char * const argv[] ) {
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
   ifstream corpus( corpusname);
-  fill_lemmas( corpus, data, encoding );
+  fill_lemmas( corpus, data, pos_tags, eos_mark, encoding );
   if ( debug ){
     cerr << "current data" << endl;
     for ( const auto it1 : data ){
@@ -569,12 +672,17 @@ int main( int argc, char * const argv[] ) {
       }
     }
   }
-  cout << "done" << endl;
+  if ( data.size() == 0 ){
+    cout << "none found. carry on " << endl;
+  }
+  else {
+    cout << "done, current size=" << data.size() << endl;
+  }
   if ( !lemma_name.empty() ){
     cout << "start reading extra lemmas from: " << lemma_name << endl;
     ifstream is( lemma_name);
-    fill_lemmas( is, data, encoding );
-    cout << "done" << endl;
+    fill_lemmas( is, data, pos_tags, eos_mark, encoding );
+    cout << "done, total size=" << data.size() << endl;
   }
   if ( debug ){
     cerr << "current data" << endl;
@@ -606,8 +714,8 @@ int main( int argc, char * const argv[] ) {
   if ( tokenizer ){
     check_data( tokenizer, data );
   }
-  create_tagger( use_config, tag_full_name, corpusname );
-  create_lemmatizer( use_config, data, mblem_full_name );
+  create_tagger( use_config, tag_full_name, corpusname, pos_tags, eos_mark );
+  create_lemmatizer( use_config, data, particles, mblem_full_name );
   Configuration frog_config = use_config;
   frog_config.clearatt( "baseName", "global" );
   frog_config.clearatt( "particles", "mblem"  );
