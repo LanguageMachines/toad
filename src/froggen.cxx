@@ -112,7 +112,7 @@ void usage( const string& name ){
        << "\t <utt>" << endl
        << "  With <utt> markers, to separate sentences. (use --eos to change)" << endl;
   cerr << "--eos 'mark' use 'mark' to seperate sentences. Default '<utt>'" << endl
-       << "\t use EL to use an empty line as separator." << endl;
+       << "\t use 'EL' to use an empty line as separator." << endl;
   cerr << "-c 'config' an optional configfile. Use only to override the system defaults" << endl
        << "\t for the Tagger, the Lemmatizer and the Tokenizer" << endl;
   cerr << "-O 'outputdir' Store all files in 'outputdir' (Higly recommended)" << endl;
@@ -146,9 +146,12 @@ void fill_lemmas( istream& is,
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
 	if (linecount == 4 ){
+	  // after the 4 lines with 2 entries have past, we assume it's a 2
+	  // column file, probably a corpus
 	  return;
 	}
 	else {
+	  // so is seems mixes 2 and 3 columns. getting crazey...
 	  cerr << "wrong inputline on line " << linecount << " (confused)" << endl;
 	  exit( EXIT_FAILURE );
 	}
@@ -167,29 +170,24 @@ void fill_lemmas( istream& is,
 	exit( EXIT_FAILURE );
       }
     }
-    cerr << "parts: " << parts[0] << "-" << parts[1] << "==" << parts[2] << endl;
-    vector<UnicodeString> uparts(3);
-    uparts[0] = UnicodeFromEnc( parts[0], enc ); // the word
-    uparts[1] = UnicodeFromEnc( parts[1], enc ); // the lemma
-    uparts[2] = UnicodeFromEnc( parts[2], enc ); // the POS tag
-    auto it = lems.lower_bound( uparts[0] );
-    if ( it == lems.upper_bound( uparts[0] ) ){
-      cerr << "new word: " << uparts[0] << endl;
+    UnicodeString uword = UnicodeFromEnc( parts[0], enc ); // the word
+    UnicodeString ulemma = UnicodeFromEnc( parts[1], enc ); // the lemma
+    UnicodeString utag = UnicodeFromEnc( parts[2], enc ); // the POS tag
+    auto it = lems.lower_bound( uword );
+    if ( it == lems.upper_bound( uword ) ){
       // so a completely new word
-      it = lems.insert( make_pair( uparts[0], map<UnicodeString,map<UnicodeString,size_t>>() ) );
-      ++it->second[uparts[1]][uparts[2]];
+      it = lems.insert( make_pair( uword, map<UnicodeString,map<UnicodeString,size_t>>() ) );
+      ++it->second[ulemma][utag];
     }
     else {
       // word seen before. But with this lemma?
-      auto it2 = it->second.find( uparts[1] );
+      auto it2 = it->second.find( ulemma );
       if ( it2 == it->second.end() ){
-	cerr << "next lemma " << uparts[1] << endl;
 	// so this lemma not yet done for this word
-	++it->second[uparts[1]][uparts[2]];
+	++it->second[ulemma][utag];
       }
       else {
-	cerr << "known word, lemma: " << uparts[2] << endl;
-	++it2->second[uparts[2]];
+	++it2->second[utag];
       }
     }
   }
@@ -659,7 +657,7 @@ int main( int argc, char * const argv[] ) {
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
   ifstream corpus( corpusname);
-  fill_lemmas( corpus, data, pos_tags, eos_mark, encoding );
+  fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
   if ( debug ){
     cerr << "current data" << endl;
     for ( const auto it1 : data ){
@@ -681,7 +679,7 @@ int main( int argc, char * const argv[] ) {
   if ( !lemma_name.empty() ){
     cout << "start reading extra lemmas from: " << lemma_name << endl;
     ifstream is( lemma_name);
-    fill_lemmas( is, data, pos_tags, eos_mark, encoding );
+    fill_lemmas( is, data, pos_tags, encoding, eos_mark );
     cout << "done, total size=" << data.size() << endl;
   }
   if ( debug ){
