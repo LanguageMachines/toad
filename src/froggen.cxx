@@ -165,9 +165,9 @@ void fill_lemmas( istream& is,
     }
     if ( !pos_tags.empty() ){
       if ( pos_tags.find( parts[2] ) == pos_tags.end() ){
-	cerr << "unknown POS tag: " << parts[2] << " in line " << linecount
+	cerr << "Warning, unknown POS tag: " << parts[2] << " in line " << linecount
 	     << " '" << line << "'" << endl;
-	exit( EXIT_FAILURE );
+	//	exit( EXIT_FAILURE );
       }
     }
     UnicodeString uword = UnicodeFromEnc( parts[0], enc ); // the word
@@ -248,9 +248,9 @@ void create_tagger( const Configuration& config,
       }
       if ( !pos_tags.empty() ){
 	if ( pos_tags.find( pos ) == pos_tags.end() ){
-	  cerr << "unknown POS tag: " << pos << " in line " << line_count
+	  cerr << "Warning, unknown POS tag: " << pos << " in line " << line_count
 	       << " '" << line << "'" << endl;
-	  exit( EXIT_FAILURE );
+	  //	  exit( EXIT_FAILURE );
 	}
       }
       os << word << "\t" << pos << endl;
