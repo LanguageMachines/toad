@@ -527,14 +527,14 @@ void create_lemmatizer( const Configuration& config,
 void check_data( Tokenizer::TokenizerClass *tokenizer,
 		 const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data ){
   for ( const auto& word : data ){
-    int num = tokenizer->tokenizeLine( word.first );
-    if ( num != 1 ){
+    tokenizer->tokenizeLine( word.first );
+    vector<Tokenizer::Token> v = tokenizer->popSentence();
+    if ( v.size() != 1 ){
       cerr << "the provided tokenizer doesn't handle '" << word.first
-	   << "' well (splits it into " << num << " parts.)" << endl;
-      vector<string> v = tokenizer->getSentences();
+	   << "' well (splits it into " << v.size() << " parts.)" << endl;
       cerr << "[";
       for ( const auto& w : v ){
-	cerr << w << " ";
+	cerr << w.us << " ";
       }
       cerr << "]" << endl;
     }
