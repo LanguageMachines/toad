@@ -13,7 +13,8 @@ notifications:
     channels:
       - "irc.uvt.nl#gitlama"
     template:
-      - "%{repository_slug}#%{build_number} %{message} --> %{build_url}"
+      - "%{repository_slug}#%{build_number}-%{branch}: \
+      %{message} --> %{build_url}"
     skip_join: true
 
 
@@ -38,11 +39,14 @@ matrix:
         - SCAN=echo
 
 before_install:
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         sudo apt-get update;
-        sudo apt-get install pkg-config autoconf-archive autotools-dev cppcheck libicu-dev libxml2-dev libbz2-dev zlib1g-dev libtar-dev libboost-dev libboost-regex-dev libexttextcat-dev;
+        sudo apt-get install pkg-config autoconf-archive autotools-dev cppcheck;
+        sudo apt-get install libicu-dev libxml2-dev libbz2-dev zlib1g-dev;
+        sudo apt-get install libtar-dev libboost-dev libboost-regex-dev;
+        sudo apt-get install libexttextcat-dev;
       fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         brew update;
         brew install pkg-config;
         brew install autoconf-archive;
@@ -117,11 +121,11 @@ before_install:
     - sudo make install
     - cd ..
 install:
-    - bash bootstrap.sh
-    - ./configure $OPENMPFLAG
-    - cppcheck --enable=all --quiet --error-exitcode=0 .
-    - $SCAN --status-bugs make
-    - make
-    - sudo make install
+  - bash bootstrap.sh
+  - ./configure $OPENMPFLAG
+  - cppcheck --enable=all --quiet --error-exitcode=0 .
+  - $SCAN --status-bugs make
+  - make
+  - sudo make install
 script:
-    - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib  && make check
+  - LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib  && make check
