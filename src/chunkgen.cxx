@@ -93,7 +93,7 @@ void spit_out( ostream& os,
   vector<string> tags;
   for( const auto& tr : tagv ){
     words.push_back( tr.word() );
-    tags.push_back( tr.assignedTag() );
+    tags.push_back( tr.assigned_tag() );
   }
   string prevP = "_";
   for ( size_t i=0; i < words.size(); ++i ){

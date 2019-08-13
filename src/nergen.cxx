@@ -119,7 +119,7 @@ void spit_out( ostream& os,
   vector<string> tags;
   for( const auto& tr : tagv ){
     words.push_back( tr.word() );
-    tags.push_back( tr.assignedTag() );
+    tags.push_back( tr.assigned_tag() );
   }
 
   vector<string> gazet_tags = myNer.create_ner_list( words );
