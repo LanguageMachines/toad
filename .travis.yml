@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: bionic
 
 group: edge
 
@@ -43,7 +43,7 @@ before_install:
       sudo apt-get update;
       sudo apt-get install pkg-config autoconf-archive autotools-dev cppcheck;
       sudo apt-get install libicu-dev libxml2-dev libbz2-dev zlib1g-dev;
-      sudo apt-get install libtar-dev libboost-dev libboost-regex-dev;
+      sudo apt-get install libtar-dev;
       sudo apt-get install libexttextcat-dev;
     fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
@@ -57,7 +57,6 @@ before_install:
       brew install cppcheck;
       brew install libtar;
       brew install libtextcat;
-      brew outdated boost || brew upgrade boost;
       brew install llvm;
       export PATH="/usr/local/opt/llvm/bin:$PATH";
       export LDFLAGS="-L/usr/local/opt/llvm/lib";
