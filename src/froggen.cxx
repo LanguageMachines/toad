@@ -132,41 +132,43 @@ void fill_lemmas( istream& is,
 		  const string& enc,
 		  const string& eos_mark ){
   string line;
-  size_t linecount = 0;
+  size_t line_count = 0;
+  size_t eos_count = 0;
   int count_2 = 0;
   while ( getline( is, line ) ){
-    linecount++;
+    line_count++;
     if ( line.empty() ){
       continue;
     }
     if ( line == eos_mark ){
+      eos_count++;
       continue;
     }
     vector<string> parts = TiCC::split_at( line, "\t" );
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
-	if (linecount == 4 ){
+	if (line_count - eos_count == 4 ){
 	  // after the 4 lines with 2 entries have past, we assume it's a 2
 	  // column file, probably a corpus
 	  return;
 	}
 	else {
 	  // so is seems mixes 2 and 3 columns. getting crazey...
-	  cerr << "wrong inputline on line " << linecount << " (confused)" << endl;
+	  cerr << "wrong inputline on line " << line_count << " (confused)" << endl;
 	  exit( EXIT_FAILURE );
 	}
       }
       continue;
     }
     else if ( parts.size() != 3 ){
-      cerr << "wrong inputline on line " << linecount << " (should be 3 parts)" << endl;
+      cerr << "wrong inputline on line " << line_count << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
     if ( !pos_tags.empty() ){
       if ( pos_tags.find( parts[2] ) == pos_tags.end() ){
-	cerr << "Warning, unknown POS tag: " << parts[2] << " in line " << linecount
-	     << " '" << line << "'" << endl;
+	cerr << "Warning, unknown POS tag: " << parts[2] << " in line "
+	     << line_count << " '" << line << "'" << endl;
 	//	exit( EXIT_FAILURE );
       }
     }
@@ -518,6 +520,10 @@ void create_lemmatizer( const Configuration& config,
 			const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data,
 			const map<string,set<string>>& particles,
 			const string& mblem_tree_file ){
+  if ( data.empty() ){
+    cout << "skip creating a lemmatizer, no lemma data available." << endl;
+    return;
+  }
   string mblem_data_file = mblem_tree_file + ".data";
   cout << "create a lemmatizer into: " << mblem_tree_file << endl;
   create_mblem_trainfile( data, particles, mblem_data_file );
@@ -600,8 +606,9 @@ int main( int argc, char * const argv[] ) {
   }
   opts.extract( 'O', outputdir );
   if ( !outputdir.empty() ){
-    if ( outputdir[outputdir.length()-1] != '/' )
+    if ( outputdir[outputdir.length()-1] != '/' ){
       outputdir += "/";
+    }
     if ( !isDir( outputdir ) && !createPath( outputdir ) ){
       cerr << "output dir not usable: " << outputdir << endl;
       exit(EXIT_FAILURE);
@@ -717,7 +724,14 @@ int main( int argc, char * const argv[] ) {
   Configuration frog_config = use_config;
   frog_config.clearatt( "baseName", "global" );
   frog_config.clearatt( "particles", "mblem"  );
-  frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
+  if ( data.empty() ){
+    frog_config.clearatt( "treeFile", "mblem" );
+    frog_config.clearatt( "set", "mblem" );
+    frog_config.clearatt( "timblOpts", "mblem" );
+  }
+  else {
+    frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
+  }
   frog_config.setatt( "settings", base_name + ".settings", "tagger" );
   frog_config.clearatt( "p", "tagger" );
   frog_config.clearatt( "P", "tagger" );
