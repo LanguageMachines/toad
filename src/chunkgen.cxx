@@ -83,6 +83,10 @@ void usage( const string& name ){
   cerr << "-O 'outputdir'\t The directoy where all the outputfiles are stored\n"
        << "\t\t highly recommended to use, because a lot of files are created\n"
        << "\t\t and your working directory will get cluttered." << endl;
+  cerr << "-b 'name' use 'name' as the label in the configfile." << endl;
+  cerr << "-X keep intermediate files." << endl;
+  cerr << "-V or --version Show version information" << endl;
+  cerr << "-h or --help Display this information." << endl;
 }
 
 
@@ -168,7 +172,7 @@ int main(int argc, char * const argv[] ) {
   string outputdir;
   string configfile;
   string base_name;
-  if ( opts.extract( 'h' ) ){
+  if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
   }
@@ -243,8 +247,13 @@ int main(int argc, char * const argv[] ) {
   if ( mbt_setting.empty() ){
     throw setting_error( "settings", "tagger" );
   }
-
-  mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
+  string use_dir = use_config.configDir();
+  if ( use_dir.empty() ){
+    mbt_setting = "-s " + outputdir + mbt_setting + " -vcf" ;
+  }
+  else {
+    mbt_setting = "-s " + use_dir + mbt_setting + " -vcf" ;
+  }
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
     cerr << "missing inputfile" << endl;
