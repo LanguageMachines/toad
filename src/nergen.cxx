@@ -62,7 +62,7 @@ void set_default_config(){
   default_config.setatt( "M", "1000", "NER" );
   default_config.setatt( "%", "5", "NER" );
   default_config.setatt( "timblOpts",
-		    "+vS -G -FColumns K: -a4 U: -a2 -q2 -mM -k11 -dID",
+		    "+vS -G -FColumns K: -a4 U: -a4 -mM -k19 -dID",
 		    "NER" );
   default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-ner-nl", "NER" );
   default_config.setatt( "max_ner_size", "15", "NER" );
