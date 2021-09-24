@@ -55,7 +55,7 @@ PKG_CHECK_MODULES([timbl], [timbl >= 6.4.8] )
 CXXFLAGS="$CXXFLAGS $timbl_CFLAGS"
 LIBS="$timbl_LIBS $LIBS"
 
-PKG_CHECK_MODULES([mbt], [mbt >= 3.5] )
+PKG_CHECK_MODULES([mbt], [mbt >= 3.7] )
 CXXFLAGS="$CXXFLAGS $mbt_CFLAGS"
 LIBS="$mbt_LIBS $LIBS"
 

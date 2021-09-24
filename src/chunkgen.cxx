@@ -33,6 +33,7 @@
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
 #include "ticcutils/Configuration.h"
+#include "ticcutils/Unicode.h"
 #include "mbt/MbtAPI.h"
 #include "libfolia/folia.h"
 #include "ucto/tokenize.h"
@@ -41,6 +42,7 @@
 #include "config.h"
 
 using namespace std;
+using namespace icu;
 using namespace TiCC;
 
 LogStream mylog(cerr);
@@ -92,16 +94,16 @@ void usage( const string& name ){
 
 void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
-	       const vector<string>& chunk_file_tags ){
-  vector<string> words;
-  vector<string> tags;
+	       const vector<UnicodeString>& chunk_file_tags ){
+  vector<UnicodeString> words;
+  vector<UnicodeString> tags;
   for( const auto& tr : tagv ){
     words.push_back( tr.word() );
     tags.push_back( tr.assigned_tag() );
   }
-  string prevP = "_";
+  UnicodeString prevP = "_";
   for ( size_t i=0; i < words.size(); ++i ){
-    string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
+    UnicodeString line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
     prevP = tags[i];
     if ( i < words.size() - 1 ){
       line += tags[i+1] + "\t";
@@ -120,8 +122,8 @@ void create_train_file( MbtAPI *MyTagger,
   ofstream os( outname );
   ifstream is( inpname );
   string line;
-  string blob;
-  vector<string> chunk_tags;
+  UnicodeString blob;
+  vector<UnicodeString> chunk_tags;
   size_t HeartBeat = 0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
@@ -129,11 +131,11 @@ void create_train_file( MbtAPI *MyTagger,
       line.clear();
     }
     if ( line.empty() ) {
-      if ( !blob.empty() ){
+      if ( !blob.isEmpty() ){
 	vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
 	spit_out( os, tagv, chunk_tags );
 	os << EOS_MARK << endl;
-	blob.clear();
+	blob.remove();
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
 	}
@@ -145,15 +147,15 @@ void create_train_file( MbtAPI *MyTagger,
       }
       continue;
     }
-    vector<string> parts;
-    if ( TiCC::split( line, parts) != 2 ){
+    vector<UnicodeString> parts = TiCC::split( TiCC::UnicodeFromUTF8(line) );
+    if ( parts.size() != 2 ){
       cerr << "DOOD: " << line << endl;
       exit(EXIT_FAILURE);
     }
     blob += parts[0] + "\n";
     chunk_tags.push_back( parts[1] );
   }
-  if ( !blob.empty() ){
+  if ( !blob.isEmpty() ){
     vector<Tagger::TagResult> tagv = MyTagger->TagLine( blob );
     spit_out( os, tagv, chunk_tags );
   }

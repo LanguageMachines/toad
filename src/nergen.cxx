@@ -34,6 +34,7 @@
 #include "ticcutils/CommandLine.h"
 #include "ticcutils/FileUtils.h"
 #include "ticcutils/Configuration.h"
+#include "ticcutils/Unicode.h"
 #include "mbt/MbtAPI.h"
 #include "libfolia/folia.h"
 #include "ucto/tokenize.h"
@@ -112,18 +113,18 @@ bool fill_gazet( const string& name ){
 
 void spit_out( ostream& os,
 	       const vector<Tagger::TagResult>& tagv,
-	       const vector<string>& orig_ner_file_tags,
+	       const vector<UnicodeString>& orig_ner_file_tags,
 	       bool override,
 	       bool bootstrap ){
-  vector<string> words;
-  vector<string> tags;
+  vector<UnicodeString> words;
+  vector<UnicodeString> tags;
   for( const auto& tr : tagv ){
     words.push_back( tr.word() );
     tags.push_back( tr.assigned_tag() );
   }
 
-  vector<string> gazet_tags = myNer.create_ner_list( words );
-  vector<string> ner_file_tags = orig_ner_file_tags;
+  vector<UnicodeString> gazet_tags = myNer.create_ner_list( words );
+  vector<UnicodeString> ner_file_tags = orig_ner_file_tags;
   if ( override ){
     vector<tc_pair> orig_ners;
     for ( const auto& it : orig_ner_file_tags ){
@@ -137,16 +138,16 @@ void spit_out( ostream& os,
   }
   if ( bootstrap ){
     for ( size_t i=0; i < words.size(); ++i ){
-      string line = words[i] + "\t";
+      UnicodeString line = words[i] + "\t";
       line += ner_file_tags[i];
       os << line << endl;
     }
   }
   else {
-    string prevP = "_";
-    string prevN = "_";
+    UnicodeString prevP = "_";
+    UnicodeString prevN = "_";
     for ( size_t i=0; i < words.size(); ++i ){
-      string line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
+      UnicodeString line = words[i] + "\t" + prevP + "\t" + tags[i] + "\t";
       prevP = tags[i];
       if ( i < words.size() - 1 ){
 	line += tags[i+1] + "\t";
@@ -175,8 +176,8 @@ void spit_out( ostream& os,
   }
 }
 
-string to_tag( const string& label ){
-  vector<string> parts = TiCC::split_at( label, "+" );
+UnicodeString to_tag( const UnicodeString& label ){
+  vector<UnicodeString> parts = TiCC::split_at( label, "+" );
   if ( parts.size() > 1 ){
     // undecided
     return "O";
@@ -187,12 +188,12 @@ string to_tag( const string& label ){
 }
 
 void boot_out( ostream& os,
-	       const vector<string>& words ){
-  vector<string> gazet_tags = myNer.create_ner_list( words );
-  string prev_tag;
+	       const vector<UnicodeString>& words ){
+  vector<UnicodeString> gazet_tags = myNer.create_ner_list( words );
+  UnicodeString prev_tag;
   for ( size_t i=0; i < words.size(); ++i ){
-    string line = words[i] + "\t";
-    string tag = to_tag( gazet_tags[i] );
+    UnicodeString line = words[i] + "\t";
+    UnicodeString tag = to_tag( gazet_tags[i] );
     if ( tag != "O" ){
       if ( tag == prev_tag ) {
 	line += "I-";
@@ -221,8 +222,8 @@ void create_train_file( MbtAPI *tagger,
   ofstream os( outname );
   ifstream is( inpname );
   string line;
-  string blob;
-  vector<string> ner_file_tags; // store the tags as specified in the input
+  UnicodeString blob;
+  vector<UnicodeString> ner_file_tags; // store the tags as specified in the input
   size_t HeartBeat=0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
@@ -230,7 +231,7 @@ void create_train_file( MbtAPI *tagger,
       line.clear();
     }
     if ( line.empty() ) {
-      if ( !blob.empty() ){
+      if ( !blob.isEmpty() ){
 	vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
 	spit_out( os, tagv, ner_file_tags, override, false );
 	if ( ++HeartBeat % 8000 == 0 ) {
@@ -240,20 +241,20 @@ void create_train_file( MbtAPI *tagger,
 	  cout << ".";
 	  cout.flush();
 	}
-	blob.clear();
+	blob.remove();
 	ner_file_tags.clear();
       }
       continue;
     }
-    vector<string> parts;
-    if ( TiCC::split( line, parts) != 2 ){
+    vector<UnicodeString> parts = TiCC::split( TiCC::UnicodeFromUTF8( line ) );
+    if ( parts.size() != 2 ){
       cerr << "DOOD: " << line << endl;
       exit(EXIT_FAILURE);
     }
     blob += parts[0] + "\n";
     ner_file_tags.push_back( parts[1] );
   }
-  if ( !blob.empty() ){
+  if ( !blob.isEmpty() ){
     vector<Tagger::TagResult> tagv = tagger->TagLine( blob );
     spit_out( os, tagv, ner_file_tags, override, false );
   }
@@ -265,7 +266,7 @@ void create_boot_file( const string& inpname,
   ofstream os( outname );
   ifstream is( inpname );
   string line;
-  string blob;
+  UnicodeString blob;
   size_t HeartBeat=0;
   while ( getline( is, line ) ){
     if ( line == "<utt>" ){
@@ -273,8 +274,8 @@ void create_boot_file( const string& inpname,
       line.clear();
     }
     if ( line.empty() ) {
-      if ( !blob.empty() ){
-	vector<string> words = TiCC::split( blob );
+      if ( !blob.isEmpty() ){
+	vector<UnicodeString> words = TiCC::split( blob );
 	boot_out( os, words );
 	if ( ++HeartBeat % 8000 == 0 ) {
 	  cout << endl;
@@ -283,17 +284,17 @@ void create_boot_file( const string& inpname,
 	  cout << ".";
 	  cout.flush();
 	}
-	blob.clear();
+	blob.remove();
       }
       continue;
     }
     if ( running ){
-      vector<string> words = TiCC::split( line );
+      vector<UnicodeString> words = TiCC::split( TiCC::UnicodeFromUTF8(line) );
       boot_out( os, words );
     }
     else {
-      vector<string> parts;
-      if ( TiCC::split( line, parts) == 2 ){
+      vector<UnicodeString> parts = TiCC::split( TiCC::UnicodeFromUTF8(line) );
+      if ( parts.size() == 2 ){
 	blob += parts[0] + " ";
       }
       else {
@@ -302,8 +303,8 @@ void create_boot_file( const string& inpname,
       }
     }
   }
-  if ( !blob.empty() ){
-    vector<string> words = TiCC::split( blob );
+  if ( !blob.isEmpty() ){
+    vector<UnicodeString> words = TiCC::split( blob );
     boot_out( os, words );
   }
 }
