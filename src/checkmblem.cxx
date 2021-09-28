@@ -69,8 +69,8 @@ std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
   return os;
 }
 
-bool isException( const string& s ){
-  if ( s.size() < 3 )
+bool isException( const UnicodeString& s ){
+  if ( s.length() < 3 )
     return true;
   return false;
 }
@@ -93,7 +93,7 @@ int main(int argc, char * const argv[] ) {
     return EXIT_FAILURE;
   }
 
-  set<string> lexicon;
+  set<UnicodeString> lexicon;
   cout << "building a lexicon from " << inpname << endl;
   string line;
   while ( getline(bron, line ) ){
@@ -105,7 +105,7 @@ int main(int argc, char * const argv[] ) {
     }
     UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
     word.toLower();
-    lexicon.insert( TiCC::UnicodeToUTF8( word ) );
+    lexicon.insert( word );
   }
   cout << "found " << lexicon.size() << " words " << endl;
   bron.close();
@@ -117,7 +117,7 @@ int main(int argc, char * const argv[] ) {
     ++count;
     vector<string> vec;
     TiCC::split( line, vec );
-    lexicon.insert( vec[0] );
+    lexicon.insert( TiCC::UnicodeFromUTF8(vec[0]) );
   }
   bron.close();
   cout<< "added " << count << " words from sonar.lemmas" << endl;
@@ -129,7 +129,7 @@ int main(int argc, char * const argv[] ) {
     ++count;
     vector<string> vec;
     TiCC::split( line, vec );
-    lexicon.insert( vec[0] );
+    lexicon.insert( TiCC::UnicodeFromUTF8(vec[0]) );
   }
   cout<< "added " << count << " words from known.lemmas" << endl;
   bron.close();
@@ -156,11 +156,11 @@ int main(int argc, char * const argv[] ) {
     myMblem.Classify( ls );
 #define LONG
 #ifdef LONG
-    vector<pair<string,string> > res = myMblem.getResult();
+    vector<pair<UnicodeString,UnicodeString> > res = myMblem.getResult();
     for ( auto const r : res ){
-      string lem = r.first;
-      lem = TiCC::lowercase(lem);
-      if ( lem != word
+      UnicodeString lem = r.first;
+      lem.toLower();
+      if ( lem != us
 	   && !isException( lem ) ){
 	if ( lexicon.find(lem) == lexicon.end() ){
 	  cerr << word << " ==> " << lem << endl;
