@@ -95,15 +95,15 @@ int main(int argc, char * const argv[] ) {
 
   set<UnicodeString> lexicon;
   cout << "building a lexicon from " << inpname << endl;
-  string line;
-  while ( getline(bron, line ) ){
-    vector<string> parts;
-    int num = TiCC::split_at( line, parts, " " );
+  UnicodeString uline;
+  while ( getline(bron, uline ) ){
+    vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
+    int num = int(parts.size());
     if ( num != 3 ){
-      cerr << "Problem in line '" << line << "' (to short?)" << endl;
+      cerr << "Problem in line '" << uline << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = parts[0];
     word.toLower();
     lexicon.insert( word );
   }
@@ -111,25 +111,23 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   unsigned int count = 0;
   bron.open( "sonar.lemmas" );
-  while ( getline(bron, line ) ){
-    if ( line.empty() )
+  while ( getline(bron, uline ) ){
+    if ( uline.isEmpty() )
       continue;
     ++count;
-    vector<string> vec;
-    TiCC::split( line, vec );
-    lexicon.insert( TiCC::UnicodeFromUTF8(vec[0]) );
+    vector<UnicodeString> vec = TiCC::split( uline );
+    lexicon.insert( vec[0] );
   }
   bron.close();
   cout<< "added " << count << " words from sonar.lemmas" << endl;
   count = 0;
   bron.open( "known.lemmas" );
-  while ( getline(bron, line ) ){
-    if ( line.empty() )
+  while ( getline(bron, uline ) ){
+    if ( uline.isEmpty() )
       continue;
     ++count;
-    vector<string> vec;
-    TiCC::split( line, vec );
-    lexicon.insert( TiCC::UnicodeFromUTF8(vec[0]) );
+    vector<UnicodeString> vec = TiCC::split( uline );
+    lexicon.insert( vec[0] );
   }
   cout<< "added " << count << " words from known.lemmas" << endl;
   bron.close();
@@ -138,15 +136,15 @@ int main(int argc, char * const argv[] ) {
   myMblem.init( configuration );
   bron.open( inpname );
   cout << "checking the lemmas in " << inpname << endl;
-  while ( getline(bron, line ) ){
-    vector<string> parts;
-    int num = TiCC::split_at( line, parts, " " );
+  while ( getline(bron, uline ) ){
+    vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
+    int num = parts.size();
     if ( num != 3 ){
-      cerr << "Problem in line '" << line << "' (to short?)" << endl;
+      cerr << "Problem in line '" << uline << "' (to short?)" << endl;
       continue;
     }
-    string word = parts[0];
-    UnicodeString us( word.c_str() );
+    UnicodeString word = parts[0];
+    UnicodeString us = word;
     UnicodeString ls = us;
     ls.toLower();
     if ( us != ls ){

@@ -55,8 +55,8 @@ static string configDir = string(SYSCONF_PATH) + "/frog/nld/";
 static string configFileName = configDir + "frog.cfg";
 
 Mbma myMbma(theErrLog);
-set<string> lexicon;
-set<string> mor_lexicon;
+set<UnicodeString> lexicon;
+set<UnicodeString> mor_lexicon;
 
 template< typename T >
 std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
@@ -84,23 +84,24 @@ void usage(){
   cerr << "\t -m signal unknow morphemes too. (a lot!) " << endl;
 }
 
-void check_word( const string& word, bool doMor ){
-  UnicodeString us( word.c_str() );
-  UnicodeString ls = us;
+void check_word( const UnicodeString& _word, bool doMor ){
+  UnicodeString uword = _word;
+  UnicodeString ls = uword;
   ls.toLower();
-  if ( us != ls )
+  if ( uword != ls ){
     return;
+  }
   myMbma.Classify( ls );
-  vector<string> anas = myMbma.getResult();
-  set<string> fails;
+  vector<UnicodeString> anas = myMbma.getResult();
+  set<UnicodeString> fails;
   for ( const auto& ana : anas ){
     bool lem_found = false;
-    vector<string> mors;
-    TiCC::split_at_first_of( ana, mors, "[]" );
+    vector<UnicodeString> mors = TiCC::split_at_first_of( ana, "[]" );
     bool first = true;
     for ( const auto& mor : mors ){
-      string mor1 = TiCC::lowercase(mor);
-      if ( mor1 == word ){
+      UnicodeString mor1 = mor;
+      mor1.toLower();
+      if ( mor1 == uword ){
 	lem_found = true;
 	break;
       }
@@ -109,7 +110,7 @@ void check_word( const string& word, bool doMor ){
 	lem_found = true;
       }
       else if ( doMor
-		&& mor1.size() != 1
+		&& mor1.length() != 1
 		&& !first
 		&& mor_lexicon.find(mor1) == mor_lexicon.end() ){
 	//	  cerr << "NOT found mor " << mor << endl;
@@ -119,7 +120,7 @@ void check_word( const string& word, bool doMor ){
     }
     if ( !lem_found ){
       using TiCC::operator<<;
-      cerr << "UNK LEMMA " << word << " - " << ana << endl;
+      cerr << "UNK LEMMA " << _word << " - " << ana << endl;
     }
     else if ( fails.size() > 0 ){
       using TiCC::operator<<;
@@ -127,7 +128,7 @@ void check_word( const string& word, bool doMor ){
       for ( const auto& f : fails ){
 	cerr << "[" << f << "] ";
       }
-      cerr << word << " - " << ana << endl;
+      cerr << _word << " - " << ana << endl;
     }
   }
 }
@@ -164,53 +165,50 @@ int main(int argc, char * const argv[] ) {
     return EXIT_FAILURE;
   }
 
-  map<string,size_t> test_lex;
+  map<UnicodeString,size_t> test_lex;
   cout << "building a lexicon from " << lexname << endl;
-  string line;
-  while ( getline(bron, line ) ){
-    vector<string> parts;
-    int num = TiCC::split_at( line, parts, " " );
-    if ( num < 2 ){
-      cerr << "Problem in line '" << line << "' (to short?)" << endl;
+  UnicodeString uline;
+  while ( getline( bron, uline ) ){
+    vector<UnicodeString> parts = TiCC::split_at( uline, " " );
+    if ( parts.size() < 2 ){
+      cerr << "Problem in line '" << uline << "' (to short?)" << endl;
       continue;
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = parts[0];
     word.toLower();
-    if ( word.length() != num-1 ){
-      cerr << "Problem in line '" << line << "' (" << word.length()
-	   << " letters, but got " << num-1 << " morphemes)" << endl;
+    int num = (int)parts.size()-1;
+    if ( word.length() != num ){
+      cerr << "Problem in line '" << uline << "' (" << word.length()
+	   << " letters, but got " << num << " morphemes)" << endl;
       continue;
     }
-    lexicon.insert( TiCC::UnicodeToUTF8( word ) );
+    lexicon.insert( word );
   }
   cout << "found " << lexicon.size() << " words " << endl;
   bron.close();
   bron.open( "sonar.lemmas" );
-  while ( getline(bron, line ) ){
-    if ( line.empty() )
+  while ( getline(bron, uline ) ){
+    if ( uline.isEmpty() )
       continue;
-    vector<string> vec;
-    TiCC::split( line, vec );
+    vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
   }
   bron.close();
   cout << "added sonar lemmas, size is now: " << lexicon.size() << " words " << endl;
   bron.open( "known.lemmas" );
-  while ( getline(bron, line ) ){
-    if ( line.empty() )
+  while ( getline(bron, uline ) ){
+    if ( uline.isEmpty() )
       continue;
-    vector<string> vec;
-    TiCC::split( line, vec );
+    vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
   }
   bron.close();
   cout << "added known lemmas, size is now: " << lexicon.size() << " words " << endl;
   bron.open( "known.morphs" );
-  while ( getline(bron, line ) ){
-    if ( line.empty() )
+  while ( getline(bron, uline ) ){
+    if ( uline.isEmpty() )
       continue;
-    vector<string> vec;
-    TiCC::split( line, vec );
+    vector<UnicodeString> vec = TiCC::split( uline );
     mor_lexicon.insert( vec[0] );
   }
   bron.close();
@@ -218,14 +216,14 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   if ( testSonar ){
     bron.open( "sonar.words" );
-    while ( getline(bron, line ) ){
-      if ( line.empty() )
+    while ( getline(bron, uline ) ){
+      if ( uline.isEmpty() )
 	continue;
-      vector<string> vec;
-      if ( TiCC::split( line, vec ) == 4 ){
+      vector<UnicodeString> vec = TiCC::split( uline );
+      if ( vec.size() == 4 ){
 	size_t freq;
-	if ( !TiCC::stringTo<size_t>( vec[1], freq ) ){
-	  cerr << "illegal int in " << line << endl;
+	if ( !TiCC::stringTo<size_t>( TiCC::UnicodeToUTF8(vec[1]), freq ) ){
+	  cerr << "illegal int in " << uline << endl;
 	  continue;
 	}
 	if ( freq > limit ){
@@ -244,27 +242,23 @@ int main(int argc, char * const argv[] ) {
   myMbma.init( configuration );
   if ( testSonar ){
     cout << "checking the morphemes in sonar.lemmas " << endl;
-    map<string,size_t>::const_iterator it = test_lex.begin();
-    while ( it != test_lex.end() ){
-      check_word( it->first, doMor );
-      ++it;
+    for ( const auto& it : test_lex ){
+      check_word( it.first, doMor );
     }
   }
   else if ( !inpname.empty() ){
     bron.open( inpname );
     cout << "checking the morphemes in " << inpname << endl;
-    while ( getline(bron, line ) ){
-      vector<string> parts;
-      TiCC::split( line, parts );
+    while ( getline(bron, uline ) ){
+      vector<UnicodeString> parts = TiCC::split( uline );
       check_word( parts[0], doMor );
     }
   }
   else {
     bron.open( lexname );
     cout << "checking the morphemes in " << lexname << endl;
-    while ( getline(bron, line ) ){
-      vector<string> parts;
-      TiCC::split_at( line, parts, " " );
+    while ( getline(bron, uline ) ){
+      vector<UnicodeString> parts = TiCC::split_at( uline, " " );
       check_word( parts[0], doMor );
     }
   }
