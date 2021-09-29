@@ -168,7 +168,7 @@ int main(int argc, char * const argv[] ) {
   map<UnicodeString,size_t> test_lex;
   cout << "building a lexicon from " << lexname << endl;
   UnicodeString uline;
-  while ( getline( bron, uline ) ){
+  while ( TiCC::getline( bron, uline ) ){
     vector<UnicodeString> parts = TiCC::split_at( uline, " " );
     if ( parts.size() < 2 ){
       cerr << "Problem in line '" << uline << "' (to short?)" << endl;
@@ -187,7 +187,7 @@ int main(int argc, char * const argv[] ) {
   cout << "found " << lexicon.size() << " words " << endl;
   bron.close();
   bron.open( "sonar.lemmas" );
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     if ( uline.isEmpty() )
       continue;
     vector<UnicodeString> vec = TiCC::split( uline );
@@ -196,7 +196,7 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   cout << "added sonar lemmas, size is now: " << lexicon.size() << " words " << endl;
   bron.open( "known.lemmas" );
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     if ( uline.isEmpty() )
       continue;
     vector<UnicodeString> vec = TiCC::split( uline );
@@ -205,7 +205,7 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   cout << "added known lemmas, size is now: " << lexicon.size() << " words " << endl;
   bron.open( "known.morphs" );
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     if ( uline.isEmpty() )
       continue;
     vector<UnicodeString> vec = TiCC::split( uline );
@@ -216,7 +216,7 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   if ( testSonar ){
     bron.open( "sonar.words" );
-    while ( getline(bron, uline ) ){
+    while ( TiCC::getline(bron, uline ) ){
       if ( uline.isEmpty() )
 	continue;
       vector<UnicodeString> vec = TiCC::split( uline );
@@ -249,7 +249,7 @@ int main(int argc, char * const argv[] ) {
   else if ( !inpname.empty() ){
     bron.open( inpname );
     cout << "checking the morphemes in " << inpname << endl;
-    while ( getline(bron, uline ) ){
+    while ( TiCC::getline(bron, uline ) ){
       vector<UnicodeString> parts = TiCC::split( uline );
       check_word( parts[0], doMor );
     }
@@ -257,7 +257,7 @@ int main(int argc, char * const argv[] ) {
   else {
     bron.open( lexname );
     cout << "checking the morphemes in " << lexname << endl;
-    while ( getline(bron, uline ) ){
+    while ( TiCC::getline(bron, uline ) ){
       vector<UnicodeString> parts = TiCC::split_at( uline, " " );
       check_word( parts[0], doMor );
     }

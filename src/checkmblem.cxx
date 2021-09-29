@@ -96,7 +96,7 @@ int main(int argc, char * const argv[] ) {
   set<UnicodeString> lexicon;
   cout << "building a lexicon from " << inpname << endl;
   UnicodeString uline;
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
     int num = int(parts.size());
     if ( num != 3 ){
@@ -111,7 +111,7 @@ int main(int argc, char * const argv[] ) {
   bron.close();
   unsigned int count = 0;
   bron.open( "sonar.lemmas" );
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     if ( uline.isEmpty() )
       continue;
     ++count;
@@ -122,7 +122,7 @@ int main(int argc, char * const argv[] ) {
   cout<< "added " << count << " words from sonar.lemmas" << endl;
   count = 0;
   bron.open( "known.lemmas" );
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     if ( uline.isEmpty() )
       continue;
     ++count;
@@ -136,7 +136,7 @@ int main(int argc, char * const argv[] ) {
   myMblem.init( configuration );
   bron.open( inpname );
   cout << "checking the lemmas in " << inpname << endl;
-  while ( getline(bron, uline ) ){
+  while ( TiCC::getline(bron, uline ) ){
     vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
     int num = parts.size();
     if ( num != 3 ){

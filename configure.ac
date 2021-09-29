@@ -63,7 +63,7 @@ PKG_CHECK_MODULES([mbtserver], [mbtserver >= 0.13] )
 CXXFLAGS="$CXXFLAGS $mbtserver_CFLAGS"
 LIBS="$mbtserver_LIBS $LIBS"
 
-PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.22] )
+PKG_CHECK_MODULES([ticcutils], [ticcutils >= 0.28] )
 CXXFLAGS="$CXXFLAGS $ticcutils_CFLAGS"
 LIBS="$ticcutils_LIBS $LIBS"
 
@@ -75,7 +75,7 @@ PKG_CHECK_MODULES([ucto],[ucto >= 0.15])
 CXXFLAGS="$CXXFLAGS $ucto_CFLAGS"
 LIBS="$ucto_LIBS $LIBS"
 
-PKG_CHECK_MODULES([frog],[frog >= 0.16])
+PKG_CHECK_MODULES([frog],[frog >= 0.24])
 CXXFLAGS="$CXXFLAGS $frog_CFLAGS"
 LIBS="$frog_LIBS $LIBS"
 
