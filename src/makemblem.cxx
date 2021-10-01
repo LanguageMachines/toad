@@ -35,6 +35,7 @@
 #include <vector>
 #include <cstdlib>
 #include <unistd.h>
+#include "ticcutils/Unicode.h"
 #include "unicode/ustream.h"
 #include "unicode/unistr.h"
 
@@ -43,16 +44,6 @@
 
 using namespace std;
 using namespace	icu;
-
-UnicodeString UTF8ToUnicode( const string& s ){
-  return UnicodeString::fromUTF8( s );
-}
-
-string UnicodeToUTF8( const UnicodeString& s ){
-  string result;
-  s.toUTF8String(result);
-  return result;
-}
 
 size_t split( const string& src, vector<string>& results,
 	      const string& seps ){
@@ -148,15 +139,17 @@ int main( int argc, char * const argv[] ) {
   UnicodeString wordform;
   UnicodeString lemma;
   UnicodeString tag;
+  static TiCC::UnicodeNormalizer nfc_normalizer;
 
-  string line;
   if ( doTrans ){
-    vector<string> parts;
-    while ( getline( tf, line ) ){
-      int num = split( line, parts, " \t" );
+    UnicodeString line;
+    while ( TiCC::getline( tf, line ) ){
+      line = nfc_normalizer.normalize( line );
+      vector<UnicodeString> parts = TiCC::split_at_first_of( line, " \t" );
+      int num = parts.size();
       if ( num == 2 ){
-	classes.push_back( UTF8ToUnicode( parts[0] ) );
-	classcodes.push_back( UTF8ToUnicode( parts[1] ) );
+	classes.push_back( parts[0] );
+	classcodes.push_back( parts[1] );
       }
       else {
 	cerr << "split failed " << num << " parts in " << line << endl;
@@ -167,24 +160,25 @@ int main( int argc, char * const argv[] ) {
 
   UnicodeString lastinstance;
   UnicodeString outLine;
-
-  while ( getline(bron, line ) ){
-    vector<string>parts;
-    int num = split( line, parts, " \t" );
+  UnicodeString uline;
+  while ( TiCC::getline( bron, uline ) ){
+    uline = nfc_normalizer.normalize( uline );
+    vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
+    int num = parts.size();
     if ( num == 3 ){
-      wordform = UTF8ToUnicode( parts[0] );
-      lemma = UTF8ToUnicode( parts[1] );
-      tag = UTF8ToUnicode( parts[2] );
+      wordform = parts[0];
+      lemma = parts[1];
+      tag = parts[2];
     }
     else {
-      cerr << "couldn't split in 3 " << line << endl;
+      cerr << "couldn't split in 3 " << uline << endl;
     }
     bool debug = DEBUG; // || (wordform == "tegemoetgekomen");
     //      = (wordform == "aangeslagen");
 
-    if ( debug )
+    if ( debug ){
       cerr << "start with wordform " << wordform << endl;
-
+    }
     UnicodeString memwordform = wordform;
     UnicodeString prefixed;
     /* find out whether there may be a prefix or infix */
@@ -273,8 +267,9 @@ int main( int argc, char * const argv[] ) {
 	cerr << "instance changed from " << lastinstance << endl
 	     << "to " << instance << endl;
       }
-      if ( !outLine.isEmpty() )
-	*os << UnicodeToUTF8(outLine) << endl;
+      if ( !outLine.isEmpty() ){
+	*os << outLine << endl;
+      }
       outLine.remove();
       outLine += instance;
       lastinstance = instance;
@@ -284,8 +279,7 @@ int main( int argc, char * const argv[] ) {
     }
     if ( doTrans ){
       size_t j = 0;
-      while ( j < classes.size() && ( tag != classes[j] ) )
-	j++;
+      while ( j < classes.size() && ( tag != classes[j] ) ) { ++j; };
       if ( j< classes.size() ){
 	outLine += UnicodeString( classcodes[j] );
       }
@@ -297,13 +291,17 @@ int main( int argc, char * const argv[] ) {
     else {
       outLine += tag;
     }
-    if ( !prefixed.isEmpty() )
+    if ( !prefixed.isEmpty() ){
       outLine += "+P" + prefixed;
-    if ( !deleted.isEmpty() )
+    }
+    if ( !deleted.isEmpty() ){
       outLine += "+D" + deleted;
-    if ( !inserted.isEmpty() )
+    }
+    if ( !inserted.isEmpty() ){
       outLine += "+I" + inserted;
+    }
   }
-  if ( !outLine.isEmpty() )
-    *os << UnicodeToUTF8(outLine) << endl;
+  if ( !outLine.isEmpty() ){
+    *os << outLine << endl;
+  }
 }

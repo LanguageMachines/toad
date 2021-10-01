@@ -70,7 +70,7 @@ std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
 }
 
 void spitOut( ostream& os, const UnicodeString& word,
-	      vector<set<string> >& morphemes ){
+	      vector<set<UnicodeString> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
     UnicodeString out;
     // left context
@@ -93,9 +93,9 @@ void spitOut( ostream& os, const UnicodeString& word,
       out += ",";
     }
     // class
-    set<string>::const_iterator it = morphemes[i].begin();
+   auto it = morphemes[i].begin();
     while ( it != morphemes[i].end() ){
-      out += TiCC::UnicodeFromUTF8( *it );
+      out += *it;
       ++it;
       if ( it != morphemes[i].end() )
 	out += "|";
@@ -141,21 +141,21 @@ int main(int argc, char * const argv[] ) {
     }
   }
 
-  string line;
-  vector<set<string> > morphemes;
+  vector<set<UnicodeString> > morphemes;
   morphemes.resize(250);
   UnicodeString prevword;
-  while ( getline(bron, line ) ){
-    if ( line.empty() ){
+  UnicodeString line;
+  while ( TiCC::getline( bron, line ) ){
+    if ( line.isEmpty() ){
 	continue;
     }
-    vector<string> parts;
-    int num = TiCC::split( line, parts );
+    vector<UnicodeString> parts = TiCC::split( line );
+    int num = parts.size();
     if ( num < 2 ){
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = parts[0];
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;

@@ -76,7 +76,7 @@ void usage( const string& name ){
 }
 
 void spitOut( ostream& os, const UnicodeString& word,
-	      vector<set<string> >& morphemes ){
+	      vector<set<UnicodeString> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
     UnicodeString out;
     // left context
@@ -99,9 +99,9 @@ void spitOut( ostream& os, const UnicodeString& word,
       out += ",";
     }
     // class
-    set<string>::const_iterator it = morphemes[i].begin();
+    auto it = morphemes[i].begin();
     while ( it != morphemes[i].end() ){
-      out += TiCC::UnicodeFromUTF8( *it );
+      out += *it;
       ++it;
       if ( it != morphemes[i].end() )
 	out += "|";
@@ -111,6 +111,7 @@ void spitOut( ostream& os, const UnicodeString& word,
 }
 
 void create_instance_file( const string& inpname, const string& outname ){
+  static TiCC::UnicodeNormalizer my_norm;
   ifstream bron( inpname );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;
@@ -123,21 +124,22 @@ void create_instance_file( const string& inpname, const string& outname ){
     exit(EXIT_FAILURE);
   }
   cerr << "start converting inputfile: " << inpname << endl;
-  string line;
-  vector<set<string> > morphemes;
+  vector<set<UnicodeString> > morphemes;
   morphemes.resize(250);
   UnicodeString prevword;
-  while ( getline(bron, line ) ){
-    if ( line.empty() ){
+  UnicodeString line;
+  while ( TiCC::getline( bron, line ) ){
+    if ( line.isEmpty() ){
 	continue;
     }
-    vector<string> parts;
-    int num = TiCC::split( line, parts );
+    line = my_norm.normalize( line );
+    vector<UnicodeString> parts = TiCC::split( line );
+    int num = parts.size();
     if ( num < 2 ){
       cerr << "Problem in line '" << line << "' (to short?)" << endl;
       exit(1);
     }
-    UnicodeString word = TiCC::UnicodeFromUTF8( parts[0] );
+    UnicodeString word = parts[0];
     if ( word.length() != num-1 ){
       cerr << "Problem in line '" << line << "' (" << word.length()
 	   << " letters, but got " << num-1 << " morphemes)" << endl;

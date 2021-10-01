@@ -128,23 +128,23 @@ void usage( const string& name ){
 
 void fill_lemmas( istream& is,
 		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
-		  const set<string>& pos_tags,
-		  const string& enc,
-		  const string& eos_mark ){
-  string line;
+		  const set<UnicodeString>& pos_tags,
+		  const string& encoding,
+		  const UnicodeString& eos_mark ){
   size_t line_count = 0;
   size_t eos_count = 0;
   int count_2 = 0;
-  while ( getline( is, line ) ){
+  UnicodeString line;
+  while ( TiCC::getline( is, line, '\n', encoding ) ){
     line_count++;
-    if ( line.empty() ){
+    if ( line.isEmpty() ){
       continue;
     }
     if ( line == eos_mark ){
       eos_count++;
       continue;
     }
-    vector<string> parts = TiCC::split_at( line, "\t" );
+    vector<UnicodeString> parts = TiCC::split_at_first_of( line, "\t" );
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
 	if (line_count - eos_count == 4 ){
@@ -172,9 +172,9 @@ void fill_lemmas( istream& is,
 	//	exit( EXIT_FAILURE );
       }
     }
-    UnicodeString uword = UnicodeFromEnc( parts[0], enc ); // the word
-    UnicodeString ulemma = UnicodeFromEnc( parts[1], enc ); // the lemma
-    UnicodeString utag = UnicodeFromEnc( parts[2], enc ); // the POS tag
+    UnicodeString uword = parts[0]; // the word
+    UnicodeString ulemma = parts[1]; // the lemma
+    UnicodeString utag = parts[2]; // the POS tag
     auto it = lems.lower_bound( uword );
     if ( it == lems.upper_bound( uword ) ){
       // so a completely new word
@@ -217,24 +217,24 @@ UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<Unico
 void create_tagger( const Configuration& config,
 		    const string& base_name,
 		    const string& corpus_name,
-		    const set<string>& pos_tags,
-		    const string& eos_mark ){
+		    const set<UnicodeString>& pos_tags,
+		    const UnicodeString& eos_mark ){
   cout << "create a tagger from: " << corpus_name << endl;
   ifstream corpus( corpus_name );
   string tag_data_name = base_name + ".data";
   ofstream os( tag_data_name );
-  string line;
   size_t line_count = 0;
-  while ( getline( corpus, line ) ){
+  UnicodeString line;
+  while ( TiCC::getline( corpus, line ) ){
     ++line_count;
-    if ( ( line.empty() && eos_mark == "EL" )
+    if ( ( line.isEmpty() && eos_mark == "EL" )
 	 || line == eos_mark ){
       os << line << endl;
     }
     else {
-      vector<string> parts = TiCC::split_at( line, "\t" );
-      string word;
-      string pos;
+      vector<UnicodeString> parts = TiCC::split_at( line, "\t" );
+      UnicodeString word;
+      UnicodeString pos;
       if ( parts.size() == 2 ){
 	word = parts[0];
 	pos = parts[1];
@@ -295,22 +295,22 @@ map<string,set<string>> fill_particles( const string& line ){
   return result;
 }
 
-set<string> fill_postags( const string& pos_tags_file ){
-  set<string> result;
+set<UnicodeString> fill_postags( const string& pos_tags_file ){
+  set<UnicodeString> result;
   if ( !pos_tags_file.empty() ){
     ifstream is( pos_tags_file );
-    string line;
+    UnicodeString line;
     size_t count = 0;
-    while ( getline( is, line ) ){
+    while ( TiCC::getline( is, line ) ){
       ++count;
-      if ( line.empty() ){
+      if ( line.isEmpty() ){
 	continue;
       }
       if ( line[0] == '#' ){
 	// comment
 	continue;
       }
-      vector<string> v = TiCC::split( line );
+      vector<UnicodeString> v = TiCC::split( line );
       if ( v.size() > 1 ){
 	result.insert( v[1] );
       }
@@ -614,8 +614,10 @@ int main( int argc, char * const argv[] ) {
       exit(EXIT_FAILURE);
     }
   }
-  string eos_mark = "<utt>";
-  opts.extract( "eos", eos_mark );
+  UnicodeString eos_mark = "<utt>";
+  string value;
+  opts.extract( "eos", value );
+  eos_mark = TiCC::UnicodeFromUTF8(value);
   bool t_opt = opts.extract( 't', tokfile );
   if ( !t_opt ){
     string tokdir = use_config.getatt( "configDir", "tokenizer" );
@@ -655,7 +657,7 @@ int main( int argc, char * const argv[] ) {
   }
   string pos_tags_file;
   opts.extract( "postags", pos_tags_file );
-  set<string> pos_tags = fill_postags( pos_tags_file );
+  set<UnicodeString> pos_tags = fill_postags( pos_tags_file );
   multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>> data;
   // WTF is this?
   // a mutimap of Words to a map of lemmas to a frequency list of POS tags.

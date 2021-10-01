@@ -132,16 +132,17 @@ bool init(){
 }
 
 void Test( istream& in, bool deep ){
-  string line;
-  while ( getline( in, line ) ){
-    line = TiCC::trim( line );
-    if ( line.empty() )
+  UnicodeString line;
+  while ( TiCC::getline( in, line ) ){
+    line.trim();
+    if ( line.isEmpty() )
       continue;
     //    cerr << "processing: " << line << endl;
-    vector<string> parts;
-    if ( TiCC::split( line, parts ) < 2 )
+    vector<UnicodeString> parts = TiCC::split( line );
+    if ( parts.size() < 2 ){
       continue;
-    UnicodeString uWord = TiCC::UnicodeFromUTF8(parts[0]);
+    }
+    UnicodeString uWord = parts[0];
     uWord.toLower();
     parts.erase(parts.begin());
     vector<Rule *> rules = myMbma.execute( uWord, parts );
