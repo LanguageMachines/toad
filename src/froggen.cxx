@@ -54,6 +54,7 @@ const int HISTORY = 20;
 
 static Configuration use_config;
 static Configuration default_config;
+static TiCC::UnicodeNormalizer nfc_norm; // to normalize Unicode to NFC
 
 void set_default_config(){
   default_config.setatt( "baseName", "froggen", "global" );
@@ -129,13 +130,14 @@ void usage( const string& name ){
 void fill_lemmas( istream& is,
 		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
 		  const set<UnicodeString>& pos_tags,
+
 		  const string& encoding,
 		  const UnicodeString& eos_mark ){
   size_t line_count = 0;
   size_t eos_count = 0;
   int count_2 = 0;
   UnicodeString line;
-  while ( TiCC::getline( is, line, '\n', encoding ) ){
+  while ( TiCC::getline( is, line, encoding ) ){
     line_count++;
     if ( line.isEmpty() ){
       continue;
@@ -144,6 +146,7 @@ void fill_lemmas( istream& is,
       eos_count++;
       continue;
     }
+    line = nfc_norm.normalize( line );
     vector<UnicodeString> parts = TiCC::split_at_first_of( line, "\t" );
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
@@ -227,6 +230,7 @@ void create_tagger( const Configuration& config,
   UnicodeString line;
   while ( TiCC::getline( corpus, line ) ){
     ++line_count;
+    line = nfc_norm.normalize( line );
     if ( ( line.isEmpty() && eos_mark == "EL" )
 	 || line == eos_mark ){
       os << line << endl;
@@ -310,6 +314,7 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 	// comment
 	continue;
       }
+      line = nfc_norm.normalize( line );
       vector<UnicodeString> v = TiCC::split( line );
       if ( v.size() > 1 ){
 	result.insert( v[1] );
@@ -617,7 +622,9 @@ int main( int argc, char * const argv[] ) {
   UnicodeString eos_mark = "<utt>";
   string value;
   opts.extract( "eos", value );
-  eos_mark = TiCC::UnicodeFromUTF8(value);
+  if ( !value.empty() ){
+    eos_mark = TiCC::UnicodeFromUTF8(value);
+  }
   bool t_opt = opts.extract( 't', tokfile );
   if ( !t_opt ){
     string tokdir = use_config.getatt( "configDir", "tokenizer" );
@@ -665,6 +672,7 @@ int main( int argc, char * const argv[] ) {
   // e.g. on output we have te re-sort it to make it usable.
 
   cout << "start reading lemmas from the corpus: " << corpusname << endl;
+  cout << "EOS marker = '" << eos_mark << "'" << endl;
   ifstream corpus( corpusname);
   fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
   if ( debug ){

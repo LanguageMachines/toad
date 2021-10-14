@@ -49,6 +49,7 @@ using namespace	icu;
 #define RIGHT 6
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
+static TiCC::UnicodeNormalizer nfc_normalizer;
 
 void usage(){
   cerr << "makembma [-i inputfile] [-o outputfile]"
@@ -149,6 +150,7 @@ int main(int argc, char * const argv[] ) {
     if ( line.isEmpty() ){
 	continue;
     }
+    line = nfc_normalizer.normalize(line);
     vector<UnicodeString> parts = TiCC::split( line );
     int num = parts.size();
     if ( num < 2 ){
