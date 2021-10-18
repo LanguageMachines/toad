@@ -51,6 +51,7 @@ using TiCC::operator<<;
 
 int debug = 0;
 const int HISTORY = 20;
+bool lemma_file_only = false;
 
 static Configuration use_config;
 static Configuration default_config;
@@ -147,7 +148,7 @@ void fill_lemmas( istream& is,
       continue;
     }
     line = nfc_norm.normalize( line );
-    vector<UnicodeString> parts = TiCC::split_at_first_of( line, "\t" );
+    vector<UnicodeString> parts = TiCC::split_at( line, "\t" );
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
 	if (line_count - eos_count == 4 ){
@@ -582,11 +583,10 @@ int main( int argc, char * const argv[] ) {
   }
 
   if ( !opts.extract( 'T', corpusname ) ){
-    cerr << "Missing a corpus!, (-T option)" << endl;
-    usage( opts.prog_name() );
-    exit( EXIT_FAILURE );
+    cout << "Missing a corpus!, (-T option), assuming lemmas only" << endl;
+    lemma_file_only = true;
   }
-  if ( !isFile( corpusname ) ){
+  else if ( !isFile( corpusname ) ){
     cerr << "unable to find the corpus: " << corpusname << endl;
     exit( EXIT_FAILURE );
   }
@@ -608,6 +608,10 @@ int main( int argc, char * const argv[] ) {
       cerr << "unable to find: '" << lemma_name << "'" << endl;
       return EXIT_FAILURE;
     }
+  }
+  else if ( lemma_file_only ){
+    cerr << "no -T or -l option found!" << endl;
+    exit( EXIT_FAILURE );
   }
   opts.extract( 'O', outputdir );
   if ( !outputdir.empty() ){
@@ -670,33 +674,46 @@ int main( int argc, char * const argv[] ) {
   // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
   // this structure is probably overly complex. redesign is needed.
   // e.g. on output we have te re-sort it to make it usable.
-
-  cout << "start reading lemmas from the corpus: " << corpusname << endl;
-  cout << "EOS marker = '" << eos_mark << "'" << endl;
-  ifstream corpus( corpusname);
-  fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
-  if ( debug ){
-    cerr << "current data" << endl;
-    for ( const auto it1 : data ){
-      cerr << it1.first;
-      for( const auto& it2 : it1.second ){
-	cerr << "\t" << it2.first << endl;
-	for( const auto& it3 : it2.second ){
-	  cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
+  if ( !lemma_file_only ){
+    cout << "start reading lemmas from the corpus: " << corpusname << endl;
+    cout << "EOS marker = '" << eos_mark << "'" << endl;
+    ifstream corpus( corpusname);
+    fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
+    if ( debug ){
+      cerr << "current data" << endl;
+      for ( const auto it1 : data ){
+	cerr << it1.first;
+	for( const auto& it2 : it1.second ){
+	  cerr << "\t" << it2.first << endl;
+	  for( const auto& it3 : it2.second ){
+	    cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
+	  }
 	}
       }
     }
-  }
-  if ( data.size() == 0 ){
-    cout << "none found. carry on " << endl;
-  }
-  else {
-    cout << "done, current size=" << data.size() << endl;
+    if ( data.size() == 0 ){
+      cout << "none found. carry on " << endl;
+    }
+    else {
+      cout << "done, current size=" << data.size() << endl;
+    }
   }
   if ( !lemma_name.empty() ){
     cout << "start reading extra lemmas from: " << lemma_name << endl;
     ifstream is( lemma_name);
     fill_lemmas( is, data, pos_tags, encoding, eos_mark );
+    if ( debug ){
+      cerr << "current data" << endl;
+      for ( const auto it1 : data ){
+	cerr << it1.first;
+	for( const auto& it2 : it1.second ){
+	  cerr << "\t" << it2.first << endl;
+	  for( const auto& it3 : it2.second ){
+	    cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
+	  }
+	}
+      }
+    }
     cout << "done, total size=" << data.size() << endl;
   }
   if ( debug ){
@@ -729,9 +746,18 @@ int main( int argc, char * const argv[] ) {
   if ( tokenizer ){
     check_data( tokenizer, data );
   }
-  create_tagger( use_config, tag_full_name, corpusname, pos_tags, eos_mark );
-  create_lemmatizer( use_config, data, particles, mblem_full_name );
   Configuration frog_config = use_config;
+  if ( !lemma_file_only ){
+    create_tagger( use_config, tag_full_name, corpusname, pos_tags, eos_mark );
+    frog_config.setatt( "settings", base_name + ".settings", "tagger" );
+    frog_config.clearatt( "p", "tagger" );
+    frog_config.clearatt( "P", "tagger" );
+    frog_config.clearatt( "timblOpts", "tagger" );
+    frog_config.clearatt( "M", "tagger" );
+    frog_config.clearatt( "n", "tagger" );
+    frog_config.clearatt( "%", "tagger" );
+  }
+  create_lemmatizer( use_config, data, particles, mblem_full_name );
   frog_config.clearatt( "baseName", "global" );
   frog_config.clearatt( "particles", "mblem"  );
   if ( data.empty() ){
@@ -742,13 +768,6 @@ int main( int argc, char * const argv[] ) {
   else {
     frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
   }
-  frog_config.setatt( "settings", base_name + ".settings", "tagger" );
-  frog_config.clearatt( "p", "tagger" );
-  frog_config.clearatt( "P", "tagger" );
-  frog_config.clearatt( "timblOpts", "tagger" );
-  frog_config.clearatt( "M", "tagger" );
-  frog_config.clearatt( "n", "tagger" );
-  frog_config.clearatt( "%", "tagger" );
   string frog_cfg = outputdir + "froggen.cfg.template";
   if ( frog_cfg == configfile ){
     frog_cfg += ".new";
