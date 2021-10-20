@@ -71,7 +71,7 @@ void set_default_config(){
 }
 
 void usage( const string& name ){
-  cerr << name <<" [-c configfile] [-O outputdir] "
+  cerr << name <<" [-c configfile] [-O outputdir] inputfile"
        << endl;
 }
 
