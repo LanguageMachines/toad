@@ -151,7 +151,7 @@ int main(int argc, char * const argv[] ) {
       break;
     case 'S':
       testSonar = true;
-      limit = TiCC::stringTo<size_t>( optarg );
+      limit = std::stol( optarg );
       break;
     case 't':
       inpname = optarg;
