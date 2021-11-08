@@ -8,28 +8,27 @@ using namespace std;
 
 int main(){
   string line;
-  vector<string> parts;
   if ( !getline( cin, line ) ){
     cerr << "empty input" << endl;
     exit(EXIT_FAILURE);
   }
-  int size = TiCC::split_at( line, parts, "\t" );
+  vector<string> parts = TiCC::split_at( line, "\t" );
   string word = parts[0];
   string ner = parts[1];
   string prev = "_";
   string cur = parts[2];
   string next;
   while ( getline( cin, line ) ){
-    int size = TiCC::split_at( line, parts, "\t" );
-    if ( size < 1 ){
+    parts = TiCC::split_at( line, "\t" );
+    if ( parts.empty() ){
       // ok, close previous group
       cout << word << "\t" << "\t" << ner << "\t" << prev << "\t" << cur << "\t_" << endl << endl;
       prev = "_";
       if ( !getline( cin, line )){
 	break;
       }
-      int size = TiCC::split_at( line, parts, "\t" );
-      if ( size < 1 ){
+      parts = TiCC::split_at( line, "\t" );
+      if ( parts.empty() ){
 	cerr << "2 empty lines in a row! " << endl;
 	exit(EXIT_FAILURE);
       }
