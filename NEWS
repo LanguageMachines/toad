@@ -1,3 +1,8 @@
+toad 0.7 2021-12-15
+[Ko vd Sloot]
+* updated to work with newest Unicode aware ticcutils, Frog and Mbt
+* froggen can now also create only a lemmatizer
+
 toad 0.6 2019-10-21
 [Ko vd Sloot]
 * updated to work with newest mbt/mbtserver
