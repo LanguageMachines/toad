@@ -151,7 +151,7 @@ void Test( istream& in, bool deep ){
     }
     else {
       for ( auto const& r : rules ){
-	cout << uWord << "==> " << r->morpheme_string( deep )
+	cout << uWord << "==> " << r->pretty_string( deep )
 	     << " " << r->tag << endl;
 	delete r;
       }

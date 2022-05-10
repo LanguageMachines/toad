@@ -94,7 +94,7 @@ void check_word( const UnicodeString& _word, bool doMor ){
     return;
   }
   myMbma.Classify( ls );
-  vector<UnicodeString> anas = myMbma.getResult();
+  vector<UnicodeString> anas = myMbma.get_flat_result();
   set<UnicodeString> fails;
   for ( const auto& ana : anas ){
     bool lem_found = false;
