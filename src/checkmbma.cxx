@@ -60,20 +60,6 @@ static TiCC::UnicodeNormalizer nfc_norm;
 set<UnicodeString> lexicon;
 set<UnicodeString> mor_lexicon;
 
-template< typename T >
-std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
-  os << "{";
-  typename std::set<T>::const_iterator it = s.begin();
-  while ( it != s.end() ){
-    os << *it;
-    ++it;
-    if ( it != s.end() )
-      os << ",";
-  }
-  os << "}";
-  return os;
-}
-
 bool isException( const string& s ){
   if ( s.size() < 2 )
     return true;
