@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2015 - 2020
+  Copyright (c) 2015 - 2022
   CLST Radboud University
 
   This file is part of toad

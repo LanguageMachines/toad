@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010 - 2020
+  Copyright (c) 2010 - 2022
   ILK  Tilburg University
   CLST Radboud University
 
@@ -57,23 +57,10 @@ void usage(){
   cerr << "checkmblem [-i inputfile]" << endl;
 }
 
-template< typename T >
-std::ostream& operator<< ( std::ostream& os, const std::set<T>& s ){
-  os << "{";
-  typename std::set<T>::const_iterator it = s.begin();
-  while ( it != s.end() ){
-    os << *it;
-    ++it;
-    if ( it != s.end() )
-      os << ",";
-  }
-  os << "}";
-  return os;
-}
-
 bool isException( const UnicodeString& s ){
-  if ( s.length() < 3 )
+  if ( s.length() < 3 ){
     return true;
+  }
   return false;
 }
 
@@ -163,7 +150,7 @@ int main(int argc, char * const argv[] ) {
 #define LONG
 #ifdef LONG
     vector<pair<UnicodeString,UnicodeString> > res = myMblem.getResult();
-    for ( auto const r : res ){
+    for ( auto const& r : res ){
       UnicodeString lem = r.first;
       lem.toLower();
       if ( lem != us
