@@ -123,7 +123,10 @@ void usage( const string& name ){
        << "\t It must include a full path!" << endl;
   cerr << "-b 'base' set the prefix for all generated files. (default 'froggen')" << endl;
   cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
-  cerr<< "\t to validate." << endl;
+  cerr << "\t to validate." << endl;
+  cerr << "--lemma-out 'filename' Output a lemma file, in the current directory!" << endl
+       << "\t merging lemmas from the tagged corpus and the separate lemmalist" << endl
+       << "\t This list is again in the right format for training." << endl;
   cerr << "-h This messages." << endl;
   cerr << "-v or --version Give version info." << endl;
 }
@@ -199,9 +202,22 @@ void fill_lemmas( istream& is,
   }
 }
 
+void write_lemmas( ostream& os,
+		   const multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems ){
+  for ( const auto& it1 : lems ){
+    UnicodeString word = it1.first;
+    for ( const auto& it2 : it1.second ){
+      UnicodeString lemma = it2.first;
+      for( const auto& it3 : it2.second ){
+	os << word << "\t" << lemma << "\t" << it3.first << endl;
+      }
+    }
+  }
+}
+
 UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data,
-				 const UnicodeString& word,
-				 const UnicodeString& tag ){
+			    const UnicodeString& word,
+			    const UnicodeString& tag ){
   auto it = data.lower_bound( word );
   if ( it == data.upper_bound( word ) ){
     // word not found
@@ -409,7 +425,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 	UnicodeString prefixed;
 	UnicodeString thisform = wordform;
 	//  find out whether there may be a prefix or infix particle
-	for( const auto it : particles ){
+	for( const auto& it : particles ){
 	  if ( !prefixed.isEmpty() )
 	    break;
 	  thisform = wordform;
@@ -555,12 +571,14 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 }
 
 int main( int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:t:T:l:e:O:c:hV","help,version,postags:,eos:");
+  TiCC::CL_Options opts( "b:t:T:l:e:O:c:hV",
+			 "help,version,postags:,eos:,lemma-out:" );
   try {
     opts.parse_args( argc, argv );
   }
   catch ( const exception& e ){
     cerr << e.what() << endl;
+    cerr << "use " << opts.prog_name() << " -h for help" << endl;
     exit(EXIT_FAILURE);
   }
   set_default_config();
@@ -568,6 +586,7 @@ int main( int argc, char * const argv[] ) {
   string corpusname;
   string outputdir;
   string lemma_name;
+  string lemma_outname;
   string tokfile;
   string configfile;
   string encoding = "UTF-8";
@@ -622,6 +641,12 @@ int main( int argc, char * const argv[] ) {
       cerr << "output dir not usable: " << outputdir << endl;
       exit(EXIT_FAILURE);
     }
+  }
+  opts.extract( "lemma-out", lemma_outname );
+  if ( !lemma_outname.empty()
+       && (lemma_outname == lemma_name) ){
+    cerr << "conflicting name for lemma-out option " << lemma_outname << endl;
+    return EXIT_FAILURE;
   }
   UnicodeString eos_mark = "<utt>";
   string value;
@@ -681,7 +706,7 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
-      for ( const auto it1 : data ){
+      for ( const auto& it1 : data ){
 	cerr << it1.first;
 	for( const auto& it2 : it1.second ){
 	  cerr << "\t" << it2.first << endl;
@@ -704,7 +729,7 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( is, data, pos_tags, encoding, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
-      for ( const auto it1 : data ){
+      for ( const auto& it1 : data ){
 	cerr << it1.first;
 	for( const auto& it2 : it1.second ){
 	  cerr << "\t" << it2.first << endl;
@@ -718,7 +743,7 @@ int main( int argc, char * const argv[] ) {
   }
   if ( debug ){
     cerr << "current data" << endl;
-    for ( const auto it1 : data ){
+    for ( const auto& it1 : data ){
       cerr << it1.first;
       for( const auto& it2 : it1.second ){
 	cerr << "\t" << it2.first << endl;
@@ -728,7 +753,11 @@ int main( int argc, char * const argv[] ) {
       }
     }
   }
-
+  if ( !lemma_outname.empty() ){
+    ofstream os( lemma_outname );
+    write_lemmas( os, data );
+    cout << "created a lemma file: '" << lemma_outname << "'" << endl;
+  }
   string tag_full_name = outputdir + base_name;
   string mblem_tree_name = use_config.lookUp( "treeFile", "mblem" );
   if ( mblem_tree_name.empty() ){
