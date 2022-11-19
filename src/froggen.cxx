@@ -24,6 +24,7 @@
       lamasoftware (at ) science.ru.nl
 */
 
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -52,6 +53,8 @@ using TiCC::operator<<;
 int debug = 0;
 const int HISTORY = 20;
 bool lemma_file_only = false;
+string output_dir="";
+string temp_dir="/tmp/froggen";
 
 static Configuration use_config;
 static Configuration default_config;
@@ -127,6 +130,8 @@ void usage( const string& name ){
   cerr << "--lemma-out 'filename' Output a lemma file, in the current directory!" << endl
        << "\t merging lemmas from the tagged corpus and the separate lemmalist" << endl
        << "\t This list is again in the right format for training." << endl;
+  cerr << "--temp-dir 'dirname' The directory to store teporary files. "
+       << "(default: " << temp_dir << " )" << endl;
   cerr << "-h This messages." << endl;
   cerr << "-v or --version Give version info." << endl;
 }
@@ -209,7 +214,8 @@ void write_lemmas( ostream& os,
     for ( const auto& it2 : it1.second ){
       UnicodeString lemma = it2.first;
       for( const auto& it3 : it2.second ){
-	os << word << "\t" << lemma << "\t" << it3.first << endl;
+	UnicodeString pos = it3.first;
+	os << word << "\t" << lemma << "\t" << pos << endl;
       }
     }
   }
@@ -241,7 +247,7 @@ void create_tagger( const Configuration& config,
 		    const UnicodeString& eos_mark ){
   cout << "create a tagger from: " << corpus_name << endl;
   ifstream corpus( corpus_name );
-  string tag_data_name = base_name + ".data";
+  string tag_data_name = temp_dir + base_name + ".data";
   ofstream os( tag_data_name );
   size_t line_count = 0;
   UnicodeString line;
@@ -286,7 +292,7 @@ void create_tagger( const Configuration& config,
   string M_opt = config.lookUp( "M", "tagger" );
   string n_opt = config.lookUp( "n", "tagger" );
   string taggercommand = "-T " + tag_data_name
-    + " -s " + base_name + ".settings"
+    + " -s " + output_dir + base_name + ".settings"
     + " -p " + p_pat + " -P " + P_pat
     + " -O\""+ timblopts + "\""
     + " -M " + M_opt
@@ -351,10 +357,11 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 
 void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, map<UnicodeString, size_t>>>& data,
 			     const map<string,set<string>>& particles,
-			     const string& filename ){
+			     const string& _filename ){
+  string filename = temp_dir + _filename;
   ofstream os( filename );
   if ( !os ){
-    cerr << "couldn't create mblem datafile" << filename << endl;
+    cerr << "couldn't create mblem datafile: " << filename << endl;
     exit( EXIT_FAILURE );
   }
   UnicodeString outLine;
@@ -527,13 +534,15 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 }
 
 void train_mblem( const Configuration& config,
-		  const string& inputfile,
-		  const string& outputfile ){
+		  const string& datafile,
+		  const string& outfile ){
   string timblopts = config.lookUp( "timblOpts", "mblem" );
+  string inputfile = temp_dir + datafile;
   cout << "Timbl: Start training Lemmas " << inputfile << " with Options: "
 	 << timblopts << endl;
   Timbl::TimblAPI timbl( timblopts );
   timbl.Learn( inputfile );
+  string outputfile = output_dir + outfile;
   timbl.WriteInstanceBase( outputfile );
   cout << "Timbl: Done, stored Lemma instancebase : " << outputfile << endl;
 }
@@ -572,7 +581,7 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 
 int main( int argc, char * const argv[] ) {
   TiCC::CL_Options opts( "b:t:T:l:e:O:c:hV",
-			 "help,version,postags:,eos:,lemma-out:" );
+			 "help,version,postags:,eos:,lemma-out:,temp-dir:" );
   try {
     opts.parse_args( argc, argv );
   }
@@ -584,7 +593,6 @@ int main( int argc, char * const argv[] ) {
   set_default_config();
   string base_name;
   string corpusname;
-  string outputdir;
   string lemma_name;
   string lemma_outname;
   string tokfile;
@@ -632,13 +640,15 @@ int main( int argc, char * const argv[] ) {
     cerr << "no -T or -l option found!" << endl;
     exit( EXIT_FAILURE );
   }
-  opts.extract( 'O', outputdir );
-  if ( !outputdir.empty() ){
-    if ( outputdir[outputdir.length()-1] != '/' ){
-      outputdir += "/";
+  opts.extract( 'O', output_dir );
+  if ( !output_dir.empty() ){
+    if ( output_dir[output_dir.length()-1] != '/' ){
+      output_dir += "/";
     }
-    if ( !isDir( outputdir ) && !createPath( outputdir ) ){
-      cerr << "output dir not usable: " << outputdir << endl;
+    if ( ( !isDir( output_dir )
+	   && !createPath( output_dir ) )
+	 || access( output_dir.c_str(), W_OK ) ){
+      cerr << "output dir not usable: " << output_dir << endl;
       exit(EXIT_FAILURE);
     }
   }
@@ -647,6 +657,20 @@ int main( int argc, char * const argv[] ) {
        && (lemma_outname == lemma_name) ){
     cerr << "conflicting name for lemma-out option " << lemma_outname << endl;
     return EXIT_FAILURE;
+  }
+  opts.extract( "temp-dir", temp_dir );
+  cerr << "TEMP_DIR =" << temp_dir << endl;
+  if ( !temp_dir.empty() ){
+    if ( temp_dir.back() != '/' ){
+      temp_dir += "/";
+    }
+    if ( ( !isDir( temp_dir )
+	   && !createPath( temp_dir ) )
+	 || access( temp_dir.c_str(), W_OK )
+	 ){
+      cerr << "temporary dir '" << temp_dir << "' not usable" << endl;
+      return EXIT_FAILURE;
+    }
   }
   UnicodeString eos_mark = "<utt>";
   string value;
@@ -672,8 +696,9 @@ int main( int argc, char * const argv[] ) {
       cerr << "unable to find: '" << tokfile << "'" << endl;
       exit( EXIT_FAILURE );
     }
-    if ( !outputdir.empty() ){
-      string outname = outputdir + TiCC::basename(tokfile);
+    if ( !output_dir.empty() ){
+      // copy the tokenizer file to the output_dir
+      string outname = output_dir + TiCC::basename(tokfile);
       ofstream os( outname );
       ifstream is( tokfile );
       os << is.rdbuf();
@@ -693,6 +718,10 @@ int main( int argc, char * const argv[] ) {
   }
   string pos_tags_file;
   opts.extract( "postags", pos_tags_file );
+  if ( !opts.empty() ){
+    cerr << "spurious options found: " << opts << endl;
+    return EXIT_FAILURE;
+  }
   set<UnicodeString> pos_tags = fill_postags( pos_tags_file );
   multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>> data;
   // WTF is this?
@@ -758,12 +787,10 @@ int main( int argc, char * const argv[] ) {
     write_lemmas( os, data );
     cout << "created a lemma file: '" << lemma_outname << "'" << endl;
   }
-  string tag_full_name = outputdir + base_name;
   string mblem_tree_name = use_config.lookUp( "treeFile", "mblem" );
   if ( mblem_tree_name.empty() ){
     mblem_tree_name = base_name + ".tree";
   }
-  string mblem_full_name = outputdir + mblem_tree_name;
   string mblem_set_name = use_config.lookUp( "set", "mblem" );
   if ( mblem_set_name.empty() ){
     throw setting_error( "set", "mblem" );
@@ -777,7 +804,7 @@ int main( int argc, char * const argv[] ) {
   }
   Configuration frog_config = use_config;
   if ( !lemma_file_only ){
-    create_tagger( use_config, tag_full_name, corpusname, pos_tags, eos_mark );
+    create_tagger( use_config, base_name, corpusname, pos_tags, eos_mark );
     frog_config.setatt( "settings", base_name + ".settings", "tagger" );
     frog_config.clearatt( "p", "tagger" );
     frog_config.clearatt( "P", "tagger" );
@@ -786,7 +813,7 @@ int main( int argc, char * const argv[] ) {
     frog_config.clearatt( "n", "tagger" );
     frog_config.clearatt( "%", "tagger" );
   }
-  create_lemmatizer( use_config, data, particles, mblem_full_name );
+  create_lemmatizer( use_config, data, particles, mblem_tree_name );
   frog_config.clearatt( "baseName", "global" );
   frog_config.clearatt( "particles", "mblem"  );
   if ( data.empty() ){
@@ -797,7 +824,7 @@ int main( int argc, char * const argv[] ) {
   else {
     frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
   }
-  string frog_cfg = outputdir + "froggen.cfg.template";
+  string frog_cfg = output_dir + "froggen.cfg.template";
   if ( frog_cfg == configfile ){
     frog_cfg += ".new";
   }
