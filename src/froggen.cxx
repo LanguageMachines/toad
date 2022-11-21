@@ -61,7 +61,6 @@ static Configuration default_config;
 static TiCC::UnicodeNormalizer nfc_norm; // to normalize Unicode to NFC
 
 void set_default_config(){
-  default_config.setatt( "baseName", "froggen", "global" );
   // tagger defaults
   default_config.setatt( "settings", "Frog.mbt.1.0.settings", "tagger" );
   default_config.setatt( "p", "dddwfWawa", "tagger" );
@@ -75,6 +74,9 @@ void set_default_config(){
   default_config.setatt( "set",
 			 "http://ilk.uvt.nl/folia/sets/frog-mbpos-cgn",
 			 "tagger" );
+  default_config.setatt( "subsets_file", "ignore", "tagger" );
+  default_config.setatt( "constraints_file", "ignore", "tagger" );
+  default_config.setatt( "token_trans_file", "ignore", "tagger" );
   // lemmatizer defaults
   default_config.setatt( "set",
 			 "http://ilk.uvt.nl/folia/sets/frog-mblem-nl",
@@ -124,9 +126,10 @@ void usage( const string& name ){
   cerr << "-e 'encoding' Normally we handle UTF-8, but other encodings are supported." << endl;
   cerr << "-t 'tokenizerfile' An ucto style rulesfile can be specified here." << endl
        << "\t It must include a full path!" << endl;
-  cerr << "-b 'base' set the prefix for all generated files. (default 'froggen')" << endl;
   cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
   cerr << "\t to validate." << endl;
+  cerr << "--CGN use the CGN tags as used in the Dutch Frog" << endl;
+  cerr << "\t\t Will add some extra files to tge configuration" << endl;
   cerr << "--lemma-out 'filename' Output a lemma file, in the current directory!" << endl
        << "\t merging lemmas from the tagged corpus and the separate lemmalist" << endl
        << "\t This list is again in the right format for training." << endl;
@@ -530,7 +533,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
     os << out << endl;
     outLine.remove();
   }
-  cout << "created a mblem trainingsfile: " << filename << endl;
+  cout << "created a temprorary mblem trainingsfile: " << filename << endl;
 }
 
 void train_mblem( const Configuration& config,
@@ -538,13 +541,12 @@ void train_mblem( const Configuration& config,
 		  const string& outfile ){
   string timblopts = config.lookUp( "timblOpts", "mblem" );
   string inputfile = temp_dir + datafile;
-  cout << "Timbl: Start training Lemmas " << inputfile << " with Options: "
-	 << timblopts << endl;
+  cout << "Timbl: Start training Lemmas from: " << inputfile
+       << " with Options: '" << timblopts << "'" << endl;
   Timbl::TimblAPI timbl( timblopts );
   timbl.Learn( inputfile );
-  string outputfile = output_dir + outfile;
-  timbl.WriteInstanceBase( outputfile );
-  cout << "Timbl: Done, stored Lemma instancebase : " << outputfile << endl;
+  timbl.WriteInstanceBase( outfile );
+  cout << "Timbl: Done, stored Lemma instancebase : " << outfile << endl;
 }
 
 void create_lemmatizer( const Configuration& config,
@@ -555,10 +557,12 @@ void create_lemmatizer( const Configuration& config,
     cout << "skip creating a lemmatizer, no lemma data available." << endl;
     return;
   }
-  string mblem_data_file = mblem_tree_file + ".data";
-  cout << "create a lemmatizer into: " << mblem_tree_file << endl;
+  string mblem_base = TiCC::basename(mblem_tree_file);
+  string mblem_data_file = mblem_base + ".data";
+  string output_file = output_dir + mblem_base;
+  cout << "create a lemmatizer into: " << output_file << endl;
   create_mblem_trainfile( data, particles, mblem_data_file );
-  train_mblem( config, mblem_data_file, mblem_tree_file );
+  train_mblem( config, mblem_data_file, output_file );
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
@@ -579,9 +583,52 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
   }
 }
 
+void add_cgn_files( const string& output_dir,
+		    Configuration& config ){
+  // copy the cgn files to the output_dir
+  string frog_path = string(SYSCONF_PATH) + "frog/nld/";
+  try {
+    string infile = frog_path + "cgntags.main";
+    string outfile = output_dir + "cgntags.main";
+    ifstream is( infile );
+    ofstream os( outfile );
+    os << is.rdbuf();
+    config.setatt( "constraints_file", "cgntags.main", "tagger" );
+  }
+  catch ( const exception& e ){
+    cerr << "adding 'cgntags.main' failed: " << e.what() << endl;
+    exit( EXIT_FAILURE );
+  }
+  try {
+    string infile = frog_path + "cgntags.sub";
+    string outfile = output_dir + "cgntags.sub";
+    ifstream is( infile );
+    ofstream os( outfile );
+    os << is.rdbuf();
+    config.setatt( "subsets_file", "cgntags.sub", "tagger" );
+  }
+  catch ( const exception& e ){
+    cerr << "adding 'cgntags.sub' failed: " << e.what() << endl;
+    exit( EXIT_FAILURE );
+  }
+  try {
+    string infile = frog_path + "cgn_token.trans";
+    string outfile = output_dir + "cgn_token.trans";
+    ifstream is( infile );
+    ofstream os( outfile );
+    os << is.rdbuf();
+    config.setatt( "token_trans_file", "cgn_token.trans", "tagger" );
+  }
+  catch ( const exception& e ){
+    cerr << "adding 'cgn_token.trans' failed: " << e.what() << endl;
+    exit( EXIT_FAILURE );
+  }
+
+}
+
 int main( int argc, char * const argv[] ) {
   TiCC::CL_Options opts( "b:t:T:l:e:O:c:hV",
-			 "help,version,postags:,eos:,lemma-out:,temp-dir:" );
+			 "help,version,postags:,eos:,lemma-out:,temp-dir:,CGN");
   try {
     opts.parse_args( argc, argv );
   }
@@ -598,7 +645,7 @@ int main( int argc, char * const argv[] ) {
   string tokfile;
   string configfile;
   string encoding = "UTF-8";
-
+  bool use_cgn =  false;
   if ( opts.extract( 'h' ) || opts.extract( "help") ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
@@ -609,6 +656,12 @@ int main( int argc, char * const argv[] ) {
     exit( EXIT_SUCCESS );
   }
 
+  if ( opts.extract( 'b', base_name ) ){
+    cerr << "option '-b' not longer supported!\n"
+	 << "froggen will determine outputfile names based on the names "
+	 << "of the input files." << endl;
+    return EXIT_FAILURE;
+  }
   if ( !opts.extract( 'T', corpusname ) ){
     cout << "Missing a corpus!, (-T option), assuming lemmas only" << endl;
     lemma_file_only = true;
@@ -616,6 +669,9 @@ int main( int argc, char * const argv[] ) {
   else if ( !isFile( corpusname ) ){
     cerr << "unable to find the corpus: " << corpusname << endl;
     exit( EXIT_FAILURE );
+  }
+  else {
+    base_name = TiCC::basename( corpusname );
   }
   if ( opts.extract( 'c', configfile ) ){
     if ( !use_config.fill( configfile ) ) {
@@ -625,10 +681,6 @@ int main( int argc, char * const argv[] ) {
     cout << "using configuration: " << configfile << endl;
   }
   use_config.merge( default_config ); // to be sure to have all we need
-
-  if ( !opts.extract( 'b', base_name ) ){
-    base_name = use_config.lookUp( "baseName", "global" );
-  }
   opts.extract( 'l', lemma_name );
   if ( !lemma_name.empty() ){
     if ( !isFile(lemma_name) ){
@@ -645,9 +697,8 @@ int main( int argc, char * const argv[] ) {
     if ( output_dir[output_dir.length()-1] != '/' ){
       output_dir += "/";
     }
-    if ( ( !isDir( output_dir )
-	   && !createPath( output_dir ) )
-	 || access( output_dir.c_str(), W_OK ) ){
+    if ( !isWritableDir( output_dir )
+	 && !createPath( output_dir ) ){
       cerr << "output dir not usable: " << output_dir << endl;
       exit(EXIT_FAILURE);
     }
@@ -664,10 +715,8 @@ int main( int argc, char * const argv[] ) {
     if ( temp_dir.back() != '/' ){
       temp_dir += "/";
     }
-    if ( ( !isDir( temp_dir )
-	   && !createPath( temp_dir ) )
-	 || access( temp_dir.c_str(), W_OK )
-	 ){
+    if ( !isWritableDir( temp_dir )
+	 && !createPath( temp_dir ) ) {
       cerr << "temporary dir '" << temp_dir << "' not usable" << endl;
       return EXIT_FAILURE;
     }
@@ -718,6 +767,11 @@ int main( int argc, char * const argv[] ) {
   }
   string pos_tags_file;
   opts.extract( "postags", pos_tags_file );
+  use_cgn = opts.extract( "CGN" );
+  if ( use_cgn ){
+    // copy the CGN files to the output_dir and add them to the config
+    add_cgn_files( output_dir, use_config );
+  }
   if ( !opts.empty() ){
     cerr << "spurious options found: " << opts << endl;
     return EXIT_FAILURE;
@@ -746,7 +800,7 @@ int main( int argc, char * const argv[] ) {
       }
     }
     if ( data.size() == 0 ){
-      cout << "none found. carry on " << endl;
+      cout << "no lemma information found. carry on " << endl;
     }
     else {
       cout << "done, current size=" << data.size() << endl;
@@ -789,7 +843,12 @@ int main( int argc, char * const argv[] ) {
   }
   string mblem_tree_name = use_config.lookUp( "treeFile", "mblem" );
   if ( mblem_tree_name.empty() ){
-    mblem_tree_name = base_name + ".tree";
+    if ( lemma_name.empty() ){
+      mblem_tree_name = base_name + ".tree";
+    }
+    else {
+      mblem_tree_name = lemma_name + ".tree";
+    }
   }
   string mblem_set_name = use_config.lookUp( "set", "mblem" );
   if ( mblem_set_name.empty() ){
@@ -822,7 +881,7 @@ int main( int argc, char * const argv[] ) {
     frog_config.clearatt( "timblOpts", "mblem" );
   }
   else {
-    frog_config.setatt( "treeFile", mblem_tree_name, "mblem" );
+    frog_config.setatt( "treeFile", TiCC::basename(mblem_tree_name), "mblem" );
   }
   string frog_cfg = output_dir + "froggen.cfg.template";
   if ( frog_cfg == configfile ){
