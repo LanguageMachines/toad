@@ -1,4 +1,4 @@
-.TH froggen 1 "2016 october 24"
+.TH froggen 1 "2022 november 21"
 
 .SH NAME
 froggen \- A Generator for Frog datafiles
@@ -13,9 +13,11 @@ complete dataset to run Frog. Additional extra lemmas can be provided.
 
 .SH OPTIONS
 
-.BR \-b " <basename>"
+.BR \--CGN
 .RS
-Use this name as the base for all outputfiles that will be created.
+Assume the POS tags are from the CGN set. (both Tagger and Lemmatizer).
+Additional files from the Dutch Frog installation will be copied to the output
+files.
 .RE
 
 .BR \-c " <configfile>"
@@ -107,6 +109,18 @@ give some help
 .RS
 send all output to 'outputdir' instead of the current directory.
 This option is highly recommened while froggen will generated a bunch of files.
+.RE
+
+.BR \-\-temp-dir " <tempdir>"
+.RS
+store all temporary files in 'tempdir' instead of the current directory or
+the 'outputdir'. This avoids clobbering the output dir. (default is:
+/tmp/froggen/)
+.RE
+
+.BR \-\-lemma-out " <filename>"
+.RS
+write all trained lemma's back into a file with name 'filename'.
 .RE
 
 .BR \-V " or " \-\-version
