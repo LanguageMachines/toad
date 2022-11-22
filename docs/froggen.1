@@ -11,13 +11,21 @@ froggen \-T tagged\-corpus -l additional\-lemmas -c config\-file
 froggen will convert a datafile containing words, lemmas and POS\-tags into a
 complete dataset to run Frog. Additional extra lemmas can be provided.
 
+The names of created files are inferred from the names of the inputfiles.
+It is
+.B higly
+recommended to use the
+.B \-O
+option to specify an output directory, as many files
+are created.
+
 .SH OPTIONS
 
 .BR \--CGN
 .RS
 Assume the POS tags are from the CGN set. (both Tagger and Lemmatizer).
 Additional files from the Dutch Frog installation will be copied to the output
-files.
+directory.
 .RE
 
 .BR \-c " <configfile>"
@@ -100,7 +108,7 @@ vierkant	vierkant	ADJ(vrij,basis,zonder)
 .fi
 .RE
 
-.BR \-h
+.BR \-h " or " \-\-help
 .RS
 give some help
 .RE
