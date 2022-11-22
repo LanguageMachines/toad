@@ -101,7 +101,7 @@ void usage( const string& name ){
   cerr << name << " -T taggedcorpus [-l lemmalist] [-c configfile] [-e encoding] [-O outputdir]"
        << endl;
   cerr << name << " trains a Tagger AND a Lemmatizer on the 'taggedcorpus', " << endl
-       << "optionally the lemmatizer is also trained on 'lemmalist'."
+       << "optionally the lemmatizer is also trained on 'lemmalist'.\n"
        << endl;
   cerr << "  the lemmalist MUST contain tagged words in the format: " << endl
        << "\t Word-1<tab>Lemma-1<tab>POS-tag-1" << endl
@@ -129,13 +129,13 @@ void usage( const string& name ){
   cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
   cerr << "\t to validate." << endl;
   cerr << "--CGN use the CGN tags as used in the Dutch Frog" << endl;
-  cerr << "\t\t Will add some extra files to tge configuration" << endl;
+  cerr << "\t This will add some extra files to the configuration" << endl;
   cerr << "--lemma-out 'filename' Output a lemma file, in the current directory!" << endl
        << "\t merging lemmas from the tagged corpus and the separate lemmalist" << endl
        << "\t This list is again in the right format for training." << endl;
   cerr << "--temp-dir 'dirname' The directory to store teporary files. "
        << "(default: " << temp_dir << " )" << endl;
-  cerr << "-h This messages." << endl;
+  cerr << "-h or --help These messages." << endl;
   cerr << "-v or --version Give version info." << endl;
 }
 
