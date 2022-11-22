@@ -111,16 +111,19 @@ send all output to 'outputdir' instead of the current directory.
 This option is highly recommened while froggen will generated a bunch of files.
 .RE
 
-.BR \-\-temp-dir " <tempdir>"
+.BR \-\-temp\-dir " <tempdir>"
 .RS
 store all temporary files in 'tempdir' instead of the current directory or
 the 'outputdir'. This avoids clobbering the output dir. (default is:
 /tmp/froggen/)
 .RE
 
-.BR \-\-lemma-out " <filename>"
+.BR \-\-lemma\-out " <filename>"
 .RS
-write all trained lemma's back into a file with name 'filename'.
+write all trained lemma's back into a file with name 'filename'. This can be
+useful when training from both a corpus and a lemma list. The output is a merge
+of all the lemmas found. Sorted and uniq-ed.
+So this can also be used to cleanup a lemma list. e.g. after cat-ing extra info.
 .RE
 
 .BR \-V " or " \-\-version
