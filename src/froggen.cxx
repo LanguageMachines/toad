@@ -586,9 +586,12 @@ void check_data( Tokenizer::TokenizerClass *tokenizer,
 void add_cgn_files( const string& output_dir,
 		    Configuration& config ){
   // copy the cgn files to the output_dir
-  string frog_path = string(SYSCONF_PATH) + "frog/nld/";
+  string frog_path = string(SYSCONF_PATH) + "/frog/nld/";
   try {
     string infile = frog_path + "cgntags.main";
+    if ( !TiCC::isFile( infile ) ){
+      throw( "opening: " + infile + " failed: " );
+    }
     string outfile = output_dir + "cgntags.main";
     ifstream is( infile );
     ofstream os( outfile );
@@ -601,6 +604,9 @@ void add_cgn_files( const string& output_dir,
   }
   try {
     string infile = frog_path + "cgntags.sub";
+    if ( !TiCC::isFile( infile ) ){
+      throw( "opening: " + infile + " failed: " );
+    }
     string outfile = output_dir + "cgntags.sub";
     ifstream is( infile );
     ofstream os( outfile );
@@ -613,6 +619,10 @@ void add_cgn_files( const string& output_dir,
   }
   try {
     string infile = frog_path + "cgn_token.trans";
+    if ( !TiCC::isFile( infile ) ){
+      throw( "opening: " + infile + " failed: " );
+    }
+
     string outfile = output_dir + "cgn_token.trans";
     ifstream is( infile );
     ofstream os( outfile );
