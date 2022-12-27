@@ -1,18 +1,17 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ([2.69])
 AC_INIT([toad],[0.7],[lamasoftware@science.ru.nl])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CXX( [g++] )
 
 # use libtool
-AC_PROG_LIBTOOL
 LT_INIT
 
 SYSCONFDIR=$sysconfdir
@@ -79,8 +78,9 @@ PKG_CHECK_MODULES([frog],[frog >= 0.24])
 CXXFLAGS="$CXXFLAGS $frog_CFLAGS"
 LIBS="$frog_LIBS $LIBS"
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
   Makefile
   src/Makefile
   docs/Makefile
 ])
+AC_OUTPUT
