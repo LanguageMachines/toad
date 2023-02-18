@@ -199,25 +199,6 @@ void fill_lemmas( istream& is,
   }
 }
 
-UnicodeString lemma_lookup( multimap<UnicodeString, map<UnicodeString, set<UnicodeString>>>& data,
-				 const UnicodeString& word,
-				 const UnicodeString& tag ){
-  auto it = data.lower_bound( word );
-  if ( it == data.upper_bound( word ) ){
-    // word not found
-    return "";
-  }
-  for ( ; it != data.upper_bound( word ); ++it ){
-    for ( auto it2 = it->second.begin(); it2 != it->second.end(); ++it2 ){
-      if ( it2->second.find(tag) != it2->second.end() ){
-	// is it in the tagset?
-	return it2->first;
-      }
-    }
-  }
-  return "";
-}
-
 void create_tagger( const Configuration& config,
 		    const string& base_name,
 		    const string& corpus_name,

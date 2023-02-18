@@ -17,7 +17,6 @@ int main(){
   string ner = parts[1];
   string prev = "_";
   string cur = parts[2];
-  string next;
   while ( getline( cin, line ) ){
     parts = TiCC::split_at( line, "\t" );
     if ( parts.empty() ){
@@ -37,17 +36,15 @@ int main(){
 	ner = parts[1];
 	prev = cur;
 	cur = parts[2];
-	next = "_";
       }
     }
     else {
-      next = parts[2];
-      cout << word << "\t" << "\t" << ner << "\t" << prev << "\t" << cur << "\t" << next << endl;
+      cout << word << "\t" << "\t" << ner << "\t" << prev << "\t"
+	   << cur << "\t" << parts[2] << endl;
       word = parts[0];
       ner = parts[1];
       prev = cur;
       cur = parts[2];
-      next = "ERR";
     }
   }
 }
