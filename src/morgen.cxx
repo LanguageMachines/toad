@@ -146,7 +146,7 @@ void create_instance_file( const string& inpname, const string& outname ){
       exit(1);
     }
     parts.erase(parts.begin());
-    vector<Rule *> r = myMbma.execute( word, parts );
+    vector<Rule *> r = myMbma.execute( word, "", parts );
     if ( r.empty() ){
       cerr << "problems with entry: '" << line << "'" << endl;
       continue;
@@ -240,13 +240,13 @@ int main(int argc, char * const argv[] ) {
   TiCC::Configuration frog_config = use_config;
   //  frog_config.clearatt( "configDir", "global" );
   string inpname = names[0];
-  string outname = outputdir + base_name + ".data";
+  string data_out_name = outputdir + base_name + ".data";
   string treename = use_config.lookUp( "treeFile", "mbma" );
   if ( treename.empty() ){
     treename = base_name + ".tree";
   }
 
-    string cgndir;
+  string cgndir;
   bool cgn_opt = opts.extract( "cgn", cgndir );
   if ( cgn_opt ){
     use_config.setatt( "cgnDir", cgndir, "mbma" );
@@ -295,11 +295,10 @@ int main(int argc, char * const argv[] ) {
 
   frog_config.setatt( "treeFile", treename, "mbma" );
   string full_treename = outputdir + treename;
-  create_instance_file( inpname, outname );
-  create_instance_base( outname, full_treename );
+  create_instance_file( inpname, data_out_name );
+  create_instance_base( data_out_name, full_treename );
 
   frog_config.clearatt( "baseName", "mbma" );
-  string mbma_set_name = use_config.lookUp( "set", "mbma" );
 
   string cfg_out;
   if ( configfile.empty() ){

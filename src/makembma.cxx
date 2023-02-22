@@ -164,7 +164,7 @@ int main(int argc, char * const argv[] ) {
       exit(1);
     }
     parts.erase(parts.begin());
-    vector<Rule *> r = myMbma.execute( word, parts );
+    vector<Rule *> r = myMbma.execute( word, "", parts );
     if ( r.empty() ){
       cerr << "problems with entry: '" << line << "'" << endl;
       continue;

@@ -368,12 +368,12 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
     exit( EXIT_FAILURE );
   }
   UnicodeString outLine;
-  for ( const auto& it : data ){
-    UnicodeString wordform = it.first;
+  for ( const auto& data_it : data ){
+    UnicodeString wordform = data_it.first;
     UnicodeString safeInstance;
     if ( !outLine.isEmpty() ){
       string out = UnicodeToUTF8(outLine);
-      out.erase( out.length()-1 );
+      out.erase( out.length()-1 ); // remove the final '|'
       os << out << endl;
       outLine.remove();
     }
@@ -410,7 +410,7 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
       outLine = instance;
     }
     multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> sorted;
-    for ( const auto& it2 : it.second ){
+    for ( const auto& it2 : data_it.second ){
       for ( const auto& it3: it2.second ){
 	multimap<UnicodeString,UnicodeString> mm;
 	mm.insert(make_pair(it3.first,it2.first));
@@ -441,11 +441,10 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 	  thisform = wordform;
 	  if ( tag.indexOf(it.first.c_str()) >= 0 ){
 	    // the POS tag matches, so potentially yes
-	    int part_pos = -1;
 	    UnicodeString part;
 	    for ( const auto& p : it.second ){
 	      // loop over potential particles.
-	      part_pos = thisform.indexOf(p.c_str());
+	      int part_pos = thisform.indexOf(p.c_str());
 	      if ( part_pos != -1 ){
 		part = p.c_str();
 		if ( debug ){

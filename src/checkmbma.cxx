@@ -79,12 +79,13 @@ void check_word( const UnicodeString& _word, bool doMor ){
   if ( uword != ls ){
     return;
   }
-  myMbma.Classify( ls );
-  vector<UnicodeString> anas = myMbma.getResult();
+  myMbma.Classify( ls, "" );
+  vector<pair<UnicodeString,string>> anas = myMbma.getResults(true);
   set<UnicodeString> fails;
   for ( const auto& ana : anas ){
+    UnicodeString flat = flatten(ana.first);
     bool lem_found = false;
-    vector<UnicodeString> mors = TiCC::split_at_first_of( ana, "[]" );
+    vector<UnicodeString> mors = TiCC::split_at_first_of( flat, "[]" );
     bool first = true;
     for ( const auto& mor : mors ){
       UnicodeString mor1 = mor;

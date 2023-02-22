@@ -145,13 +145,13 @@ void Test( istream& in, bool deep ){
     UnicodeString uWord = parts[0];
     uWord.toLower();
     parts.erase(parts.begin());
-    vector<Rule *> rules = myMbma.execute( uWord, parts );
+    vector<Rule *> rules = myMbma.execute( uWord, "", parts );
     if ( rules.empty() ){
       cout << "no rule matched: " << line << endl;
     }
     else {
       for ( auto const& r : rules ){
-	cout << uWord << "==> " << r->morpheme_string( deep )
+	cout << uWord << "==> " << r->pretty_string( deep )
 	     << " " << r->tag << endl;
 	delete r;
       }
