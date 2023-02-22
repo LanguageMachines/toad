@@ -1,3 +1,12 @@
+toad 0.8 2023-02-22
+[Ko van der Sloot]
+* adapted all programs to changes in the Frog API
+* froggen
+  - new options: --temp-dir --output-dir and --CGN
+  - froggen can now be used tot ONLY generate a lemmatizer
+* C++ cleanup
+* updated 'man' pages
+
 toad 0.7 2021-12-15
 [Ko vd Sloot]
 * updated to work with newest Unicode aware ticcutils, Frog and Mbt
