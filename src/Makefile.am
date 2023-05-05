@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I@top_srcdir@/include
-AM_CXXFLAGS = -DSYSCONF_PATH=\"$(datadir)\" -std=c++11 -g -O3 -W -Wall -pedantic
+AM_CXXFLAGS = -DSYSCONF_PATH=\"$(datadir)\" -std=c++14 -g -O3 -W -Wall -pedantic
 
 bin_PROGRAMS = makemblem makembma checkmbma checkmblem testmbma froggen \
 	morgen chunkgen nergen
