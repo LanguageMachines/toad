@@ -781,6 +781,12 @@ int main( int argc, char * const argv[] ) {
     // copy the CGN files to the output_dir and add them to the config
     add_cgn_files( output_dir, use_config );
   }
+  else {
+    // just to be sure.
+    use_config.clearatt( "constraints_file", "tagger" );
+    use_config.clearatt( "subsets_file", "tagger" );
+    use_config.clearatt( "token_trans_file", "tagger" );
+  }
   if ( !opts.empty() ){
     cerr << "spurious options found: " << opts << endl;
     return EXIT_FAILURE;
