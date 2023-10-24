@@ -74,14 +74,14 @@ void set_default_config(){
 void usage( const string& name ){
   cerr << name <<" [-c configfile] [-O outputdir] inputfile"
        << endl;
-  cerr << "-c 'config' an optional configfile. Use only to override the system defaults" << endl;
-  cerr << "\t O 'outputdir' Store all files in 'outputdir'"
+  cerr << "  -c 'config' \t\t an optional configfile. Use only to override the system defaults" << endl;
+  cerr << "  -O 'outputdir' \t Store all files in 'outputdir'"
        << " (Higly recommended)" << endl;
-  cerr << "--temp-dir 'dirname' The directory to store teporary files. "
+  cerr << "  --temp-dir 'dirname' \t The directory to store teporary files. "
        << "(default: " << temp_dir << " )" << endl;
-  cerr << "--cgn 'cgndir' The location of the (required) CGN datafiles."
+  cerr << "  --cgn 'cgndir' \t The location of the (required) CGN datafiles."
        << " (default=" << cgn_dir << ")" << endl;
-  cerr << "-b 'basename' Set a basename for the outputfiles (default="
+  cerr << "  -b 'basename' \t\t Set a basename for the outputfiles (default="
        << base_name << ")" << endl;
 }
 
@@ -279,10 +279,12 @@ int main(int argc, char * const argv[] ) {
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
     cerr << "missing inputfile" << endl;
+    usage(opts.prog_name());
     exit(EXIT_FAILURE);
   }
   else if ( names.size() > 1 ){
     cerr << "only 1 inputfile is allowed" << endl;
+    usage(opts.prog_name());
     exit(EXIT_FAILURE);
   }
 
