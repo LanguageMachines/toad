@@ -52,6 +52,9 @@ const int RIGHT = 6;
 
 int debug = 0;
 bool have_config = false;
+string temp_dir = "/tmp/froggen";
+string base_name = "morgen";
+string cgn_dir = string(SYSCONF_PATH) + "/frog/nld/";
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
 
@@ -59,20 +62,59 @@ static TiCC::Configuration default_config;
 static TiCC::Configuration use_config;
 
 void set_default_config(){
-  default_config.setatt( "baseName", "morgen", "mbma" );
+  default_config.setatt( "baseName", base_name, "mbma" );
   default_config.setatt( "cgn_clex_main", "cgntags.main", "mbma" );
   default_config.setatt( "cgn_clex_sub", "cgntags.sub", "mbma" );
   default_config.setatt( "timblOpts", "-a1 -w2 +vS", "mbma" );
   default_config.setatt( "set", "http://ilk.uvt.nl/folia/sets/frog-mbma-nl", "mbma" );
   default_config.setatt( "clex_set", "http://ilk.uvt.nl/folia/sets/frog-mbpos-clex", "mbma" );
-  default_config.setatt( "cgnDir",
-  			 string(SYSCONF_PATH) + "/frog/nld/",
-  			 "mbma" );
+  default_config.setatt( "cgnDir", cgn_dir, "mbma" );
 }
 
 void usage( const string& name ){
   cerr << name <<" [-c configfile] [-O outputdir] inputfile"
        << endl;
+  cerr << "-c 'config' an optional configfile. Use only to override the system defaults" << endl;
+  cerr << "\t O 'outputdir' Store all files in 'outputdir'"
+       << " (Higly recommended)" << endl;
+  cerr << "--temp-dir 'dirname' The directory to store teporary files. "
+       << "(default: " << temp_dir << " )" << endl;
+  cerr << "--cgn 'cgndir' The location of the (required) CGN datafiles."
+       << " (default=" << cgn_dir << ")" << endl;
+  cerr << "-b 'basename' Set a basename for the outputfiles (default="
+       << base_name << ")" << endl;
+}
+
+void copy_cgn_files( const string& output_dir, const string& cgn_path ){
+  // copy the cgn files to the output_dir
+  try {
+    string infile = cgn_path + "cgntags.main";
+    if ( !TiCC::isFile( infile ) ){
+      throw( "opening: " + infile + " failed: " );
+    }
+    string outfile = output_dir + "cgntags.main";
+    ifstream is( infile );
+    ofstream os( outfile );
+    os << is.rdbuf();
+  }
+  catch ( const exception& e ){
+    cerr << "adding 'cgntags.main' failed: " << e.what() << endl;
+    exit( EXIT_FAILURE );
+  }
+  try {
+    string infile = cgn_path + "cgntags.sub";
+    if ( !TiCC::isFile( infile ) ){
+      throw( "opening: " + infile + " failed: " );
+    }
+    string outfile = output_dir + "cgntags.sub";
+    ifstream is( infile );
+    ofstream os( outfile );
+    os << is.rdbuf();
+  }
+  catch ( const exception& e ){
+    cerr << "adding 'cgntags.sub' failed: " << e.what() << endl;
+    exit( EXIT_FAILURE );
+  }
 }
 
 void spitOut( ostream& os, const UnicodeString& word,
@@ -111,7 +153,6 @@ void spitOut( ostream& os, const UnicodeString& word,
 }
 
 void create_instance_file( const string& inpname, const string& outname ){
-  static TiCC::UnicodeNormalizer my_norm;
   ifstream bron( inpname );
   if ( !bron ){
     cerr << "could not open input file '" << inpname << "'" << endl;
@@ -132,7 +173,6 @@ void create_instance_file( const string& inpname, const string& outname ){
     if ( line.isEmpty() ){
 	continue;
     }
-    line = my_norm.normalize( line );
     vector<UnicodeString> parts = TiCC::split( line );
     int num = parts.size();
     if ( num < 2 ){
@@ -182,7 +222,7 @@ void create_instance_base( const string& dataname, const string& treename ){
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hV","version,help,cgn:");
+  TiCC::CL_Options opts("b:O:c:hV","version,help,cgn:,temp-dir");
   try {
     opts.parse_args( argc, argv );
   }
@@ -193,7 +233,6 @@ int main(int argc, char * const argv[] ) {
 
   string outputdir;
   string configfile;
-  string base_name;
   if ( opts.extract( 'h' ) || opts.extract( "help" ) ){
     usage( opts.prog_name() );
     exit( EXIT_SUCCESS );
@@ -224,6 +263,18 @@ int main(int argc, char * const argv[] ) {
     use_config.setatt( "baseName", base_name, "mbma" );
   }
   use_config.merge( default_config ); // to be sure to have all we need
+  opts.extract( "temp-dir", temp_dir );
+  cerr << "TEMP_DIR =" << temp_dir << endl;
+  if ( !temp_dir.empty() ){
+    if ( temp_dir.back() != '/' ){
+      temp_dir += "/";
+    }
+    if ( !TiCC::isWritableDir( temp_dir )
+	 && !TiCC::createPath( temp_dir ) ) {
+      cerr << "temporary dir '" << temp_dir << "' not usable" << endl;
+      return EXIT_FAILURE;
+    }
+  }
 
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
@@ -240,59 +291,27 @@ int main(int argc, char * const argv[] ) {
   TiCC::Configuration frog_config = use_config;
   //  frog_config.clearatt( "configDir", "global" );
   string inpname = names[0];
-  string data_out_name = outputdir + base_name + ".data";
+  string data_out_name = temp_dir + base_name + ".data";
   string treename = use_config.lookUp( "treeFile", "mbma" );
   if ( treename.empty() ){
     treename = base_name + ".tree";
   }
 
-  string cgndir;
-  bool cgn_opt = opts.extract( "cgn", cgndir );
+  bool cgn_opt = opts.extract( "cgn", cgn_dir );
   if ( cgn_opt ){
-    use_config.setatt( "cgnDir", cgndir, "mbma" );
+    use_config.setatt( "cgnDir", cgn_dir, "mbma" );
   }
-  cgndir = use_config.getatt( "cgnDir", "mbma" );
-  if ( !cgndir.empty() && (cgndir.back() != '/' ) ){
+  cgn_dir = use_config.getatt( "cgnDir", "mbma" );
+  if ( !cgn_dir.empty() && (cgn_dir.back() != '/' ) ){
     use_config.clearatt( "cgnDir", "mbma" );
-    cgndir += "/";
+    cgn_dir += "/";
   }
-  if ( !TiCC::isDir( cgndir ) ){
-    cerr << "unable to find CGN dir: " << cgndir << endl;
+  if ( !TiCC::isDir( cgn_dir ) ){
+    cerr << "unable to find CGN dir: " << cgn_dir << endl;
     exit(EXIT_FAILURE);
   }
-  string mainfile = use_config.getatt( "cgn_clex_main", "mbma" );
-  if ( !mainfile.empty() ){
-    mainfile = cgndir + mainfile;
-  }
-  if ( !mainfile.empty() ) {
-    if ( !TiCC::isFile(mainfile) ){
-      cerr << "unable to find: '" << mainfile << "'" << endl;
-      exit( EXIT_FAILURE );
-    }
-    if ( !outputdir.empty() ){
-      string outname = outputdir + TiCC::basename(mainfile);
-      ofstream os( outname );
-      ifstream is( mainfile );
-      os << is.rdbuf();
-    }
-  }
-  string subfile = use_config.getatt( "cgn_clex_sub", "mbma" );
-  if ( !subfile.empty() ){
-    subfile = cgndir + subfile;
-  }
-  if ( !subfile.empty() ) {
-    if ( !TiCC::isFile(subfile) ){
-      cerr << "unable to find: '" << subfile << "'" << endl;
-      exit( EXIT_FAILURE );
-    }
-    if ( !outputdir.empty() ){
-      string outname = outputdir + TiCC::basename(subfile);
-      ofstream os( outname );
-      ifstream is( subfile );
-      os << is.rdbuf();
-    }
-  }
 
+  copy_cgn_files( outputdir, cgn_dir );
   frog_config.setatt( "treeFile", treename, "mbma" );
   string full_treename = outputdir + treename;
   create_instance_file( inpname, data_out_name );
