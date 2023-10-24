@@ -51,8 +51,6 @@ TiCC::Configuration configuration;
 static string configDir = string(SYSCONF_PATH) + "/frog/";
 static string configFileName = configDir + "frog.cfg";
 
-static TiCC::UnicodeNormalizer nfc_norm;
-
 void usage(){
   cerr << "checkmblem [-i inputfile]" << endl;
 }
@@ -86,7 +84,6 @@ int main(int argc, char * const argv[] ) {
   cout << "building a lexicon from " << inpname << endl;
   UnicodeString uline;
   while ( TiCC::getline(bron, uline ) ){
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
     int num = int(parts.size());
     if ( num != 3 ){
@@ -105,7 +102,6 @@ int main(int argc, char * const argv[] ) {
     if ( uline.isEmpty() ){
       continue;
     }
-    uline = nfc_norm.normalize( uline );
     ++count;
     vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
@@ -118,7 +114,6 @@ int main(int argc, char * const argv[] ) {
     if ( uline.isEmpty() ){
       continue;
     }
-    uline = nfc_norm.normalize( uline );
     ++count;
     vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
@@ -131,7 +126,6 @@ int main(int argc, char * const argv[] ) {
   bron.open( inpname );
   cout << "checking the lemmas in " << inpname << endl;
   while ( TiCC::getline(bron, uline ) ){
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> parts = TiCC::split_at_first_of( uline, " \t" );
     int num = parts.size();
     if ( num != 3 ){

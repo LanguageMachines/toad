@@ -55,7 +55,6 @@ static string configDir = string(SYSCONF_PATH) + "/frog/nld/";
 static string configFileName = configDir + "frog.cfg";
 
 Mbma myMbma(theErrLog);
-static TiCC::UnicodeNormalizer nfc_norm;
 
 set<UnicodeString> lexicon;
 set<UnicodeString> mor_lexicon;
@@ -158,7 +157,6 @@ int main(int argc, char * const argv[] ) {
   cout << "building a lexicon from " << lexname << endl;
   UnicodeString uline;
   while ( TiCC::getline( bron, uline ) ){
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> parts = TiCC::split_at( uline, " " );
     if ( parts.size() < 2 ){
       cerr << "Problem in line '" << uline << "' (to short?)" << endl;
@@ -181,7 +179,6 @@ int main(int argc, char * const argv[] ) {
     if ( uline.isEmpty() ) {
       continue;
     }
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
   }
@@ -192,7 +189,6 @@ int main(int argc, char * const argv[] ) {
     if ( uline.isEmpty() ){
       continue;
     }
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> vec = TiCC::split( uline );
     lexicon.insert( vec[0] );
   }
@@ -203,7 +199,6 @@ int main(int argc, char * const argv[] ) {
     if ( uline.isEmpty() ){
       continue;
     }
-    uline = nfc_norm.normalize( uline );
     vector<UnicodeString> vec = TiCC::split( uline );
     mor_lexicon.insert( vec[0] );
   }
@@ -216,7 +211,6 @@ int main(int argc, char * const argv[] ) {
       if ( uline.isEmpty() ){
 	continue;
       }
-      uline = nfc_norm.normalize( uline );
       vector<UnicodeString> vec = TiCC::split( uline );
       if ( vec.size() == 4 ){
 	size_t freq;
@@ -248,7 +242,6 @@ int main(int argc, char * const argv[] ) {
     bron.open( inpname );
     cout << "checking the morphemes in " << inpname << endl;
     while ( TiCC::getline(bron, uline ) ){
-      uline = nfc_norm.normalize( uline );
       vector<UnicodeString> parts = TiCC::split( uline );
       check_word( parts[0], doMor );
     }
@@ -257,7 +250,6 @@ int main(int argc, char * const argv[] ) {
     bron.open( lexname );
     cout << "checking the morphemes in " << lexname << endl;
     while ( TiCC::getline(bron, uline ) ){
-      uline = nfc_norm.normalize( uline );
       vector<UnicodeString> parts = TiCC::split_at( uline, " " );
       check_word( parts[0], doMor );
     }

@@ -54,11 +54,10 @@ int debug = 0;
 const int HISTORY = 20;
 bool lemma_file_only = false;
 string output_dir="";
-string temp_dir="/tmp/froggen";
+string temp_dir="/tmp/morgen";
 
 static Configuration use_config;
 static Configuration default_config;
-static TiCC::UnicodeNormalizer nfc_norm; // to normalize Unicode to NFC
 
 void set_default_config(){
   // tagger defaults
@@ -128,7 +127,7 @@ void usage( const string& name ){
        << "\t It must include a full path!" << endl;
   cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
   cerr << "\t to validate." << endl;
-  cerr << "--CGN use the CGN tags as used in the Dutch Frog" << endl;
+  cerr << "--CGN assume CGN tags as used in the Dutch Frog" << endl;
   cerr << "\t This will add some extra files to the configuration" << endl;
   cerr << "--lemma-out 'filename' Output a lemma file, in the current directory!" << endl
        << "\t merging lemmas from the tagged corpus and the separate lemmalist" << endl
@@ -158,7 +157,6 @@ void fill_lemmas( istream& is,
       eos_count++;
       continue;
     }
-    line = nfc_norm.normalize( line );
     vector<UnicodeString> parts = TiCC::split_at( line, "\t" );
     if ( parts.size() == 2 ){
       if ( ++count_2 == 4 ){
@@ -256,7 +254,6 @@ void create_tagger( const Configuration& config,
   UnicodeString line;
   while ( TiCC::getline( corpus, line ) ){
     ++line_count;
-    line = nfc_norm.normalize( line );
     if ( ( line.isEmpty() && eos_mark == "EL" )
 	 || line == eos_mark ){
       os << line << endl;
@@ -340,7 +337,6 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 	// comment
 	continue;
       }
-      line = nfc_norm.normalize( line );
       vector<UnicodeString> v = TiCC::split( line );
       if ( v.size() > 1 ){
 	result.insert( v[1] );
