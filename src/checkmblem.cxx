@@ -48,7 +48,7 @@ int tpDebug=0;
 TiCC::LogStream *theErrLog = new TiCC::LogStream(cerr);
 
 TiCC::Configuration configuration;
-static string configDir = string(SYSCONF_PATH) + "/frog/";
+static string configDir = string(SYSCONF_PATH) + "/frog/nld/";
 static string configFileName = configDir + "frog.cfg";
 
 void usage(){
@@ -121,7 +121,10 @@ int main(int argc, char * const argv[] ) {
   cout<< "added " << count << " words from known.lemmas" << endl;
   bron.close();
   Mblem myMblem(theErrLog);
-  configuration.fill( configFileName );
+  if ( !configuration.fill( configFileName ) ){
+    cerr << "FAILED" << endl;
+    exit( EXIT_FAILURE);
+  }
   myMblem.init( configuration );
   bron.open( inpname );
   cout << "checking the lemmas in " << inpname << endl;
