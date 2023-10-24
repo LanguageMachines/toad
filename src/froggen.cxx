@@ -676,6 +676,11 @@ int main( int argc, char * const argv[] ) {
   }
   else if ( lemma_file_only ){
     cerr << "no -T or -l option found!" << endl;
+    cerr << "usage: " << opts.prog_name()
+	 << " -T taggedcorpus [-l lemmalist] [-c configfile] [-e encoding]"
+	 << " [-O outputdir]"
+	 << endl;
+    cerr << "use " << opts.prog_name() << " -h for more info" << endl;
     exit( EXIT_FAILURE );
   }
   opts.extract( 'O', output_dir );
