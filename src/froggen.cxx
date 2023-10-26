@@ -55,7 +55,7 @@ const int HISTORY = 20;
 bool lemma_file_only = false;
 string output_dir="";
 string temp_dir="/tmp/morgen";
-
+string encoding="UTF-8";
 static Configuration use_config;
 static Configuration default_config;
 
@@ -123,6 +123,9 @@ void usage( const string& name ){
        << "\t for the Tagger, the Lemmatizer and the Tokenizer" << endl;
   cerr << "-O 'outputdir' Store all files in 'outputdir' (Higly recommended)" << endl;
   cerr << "-e 'encoding' Normally we handle UTF-8, but other encodings are supported." << endl;
+  cerr << "\t WARNING: This encoding is used for ALL datafiles!" << endl;
+  cerr << "\t\t Be sure to use the same encoding for the Tagged Corpus and the lemma file." << endl;
+  cerr << "\t\t The results will ALWAYS be stored in UTF-8 (NFC normalized)" << endl;
   cerr << "-t 'tokenizerfile' An ucto style rulesfile can be specified here." << endl
        << "\t It must include a full path!" << endl;
   cerr << "--postags 'file'. Read POS tags labels, from 'file' and use those" <<endl;
@@ -142,7 +145,6 @@ void fill_lemmas( istream& is,
 		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
 		  const set<UnicodeString>& pos_tags,
 
-		  const string& encoding,
 		  const UnicodeString& eos_mark ){
   size_t line_count = 0;
   size_t eos_count = 0;
@@ -233,7 +235,7 @@ void create_tagger( const Configuration& config,
   ofstream os( tag_data_name );
   size_t line_count = 0;
   UnicodeString line;
-  while ( TiCC::getline( corpus, line ) ){
+  while ( TiCC::getline( corpus, line, encoding ) ){
     ++line_count;
     if ( ( line.isEmpty() && eos_mark == "EL" )
 	 || line == eos_mark ){
@@ -309,7 +311,7 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
     ifstream is( pos_tags_file );
     UnicodeString line;
     size_t count = 0;
-    while ( TiCC::getline( is, line ) ){
+    while ( TiCC::getline( is, line, encoding ) ){
       ++count;
       if ( line.isEmpty() ){
 	continue;
@@ -630,7 +632,6 @@ int main( int argc, char * const argv[] ) {
   string lemma_outname;
   string tokfile;
   string configfile;
-  string encoding = "UTF-8";
   bool use_cgn =  false;
   if ( opts.extract( 'h' ) || opts.extract( "help") ){
     usage( opts.prog_name() );
@@ -783,7 +784,7 @@ int main( int argc, char * const argv[] ) {
     cout << "start reading lemmas from the corpus: " << corpusname << endl;
     cout << "EOS marker = '" << eos_mark << "'" << endl;
     ifstream corpus( corpusname);
-    fill_lemmas( corpus, data, pos_tags, encoding, eos_mark );
+    fill_lemmas( corpus, data, pos_tags, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
       for ( const auto& it1 : data ){
@@ -806,7 +807,7 @@ int main( int argc, char * const argv[] ) {
   if ( !lemma_name.empty() ){
     cout << "start reading extra lemmas from: " << lemma_name << endl;
     ifstream is( lemma_name);
-    fill_lemmas( is, data, pos_tags, encoding, eos_mark );
+    fill_lemmas( is, data, pos_tags, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
       for ( const auto& it1 : data ){

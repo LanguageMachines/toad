@@ -1,4 +1,4 @@
-.TH froggen 1 "2022 november 22"
+.TH froggen 1 "2023 october 26"
 
 .SH NAME
 froggen \- A Generator for Frog datafiles
@@ -38,12 +38,23 @@ tagger.
 
 .BR \-e " <encoding>"
 .RS
-assume the input files to be in the specified
+Use this option for inputfiles in a NON UTF-8 encoding. Decoding to UTF-8 is
+performed on ALL input files. So the Corpus and additional lemma files should
+be in the same
 .B encoding.
-.B Froggen
-will convert all data to UTF8, the encoding which
-.B frog
-assumes.
+Default we assume UTF-8 encoding for the input data.
+
+.B froggen
+will create it's output files using UTF-8 encoding (NFC normalized)
+.RE
+
+.BR \-\-eos " <eosmarker>"
+.RS
+Use
+.B eosmarker
+as the End Of Sentence marker. (default "<utt>")
+
+Use "EL" to signal empty lines as separators.
 .RE
 
 .BR \-l " <lemmas>"
@@ -51,6 +62,17 @@ assumes.
 provide additional lemmas, in the format:
 
 word <WS> lemma <WS> POS\-tag
+
+Where WS is whitespace like spaces or tab(s).
+
+.RE
+.BR \-\-postags " <postag\-file>"
+.RS
+Read the POS stags from a list of Tags. Use these for validating the tags.
+
+Format:
+
+word <WS> POS\-tag
 
 Where WS is whitespace like spaces or tab(s).
 
