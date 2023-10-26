@@ -55,6 +55,7 @@ bool have_config = false;
 string temp_dir = "/tmp/froggen";
 string base_name = "morgen";
 string cgn_dir = string(SYSCONF_PATH) + "/frog/nld/";
+string encoding = "UTF-8";
 
 static Mbma myMbma(new TiCC::LogStream(cerr));
 
@@ -81,8 +82,10 @@ void usage( const string& name ){
        << "(default: " << temp_dir << " )" << endl;
   cerr << "  --cgn 'cgndir' \t The location of the (required) CGN datafiles."
        << " (default=" << cgn_dir << ")" << endl;
-  cerr << "  -b 'basename' \t\t Set a basename for the outputfiles (default="
+  cerr << "  -b 'basename' \t Set a basename for the outputfiles (default="
        << base_name << ")" << endl;
+  cerr << "  -e 'encoding' \t Normally we handle UTF-8, but other encodings are supported." << endl;
+  cerr << "\t\t\t The results will ALWAYS be stored in UTF-8 (NFC normalized)" << endl;
 }
 
 void copy_cgn_files( const string& output_dir, const string& cgn_path ){
@@ -169,7 +172,7 @@ void create_instance_file( const string& inpname, const string& outname ){
   morphemes.resize(250);
   UnicodeString prevword;
   UnicodeString line;
-  while ( TiCC::getline( bron, line ) ){
+  while ( TiCC::getline( bron, line, encoding ) ){
     if ( line.isEmpty() ){
 	continue;
     }
@@ -222,7 +225,7 @@ void create_instance_base( const string& dataname, const string& treename ){
 }
 
 int main(int argc, char * const argv[] ) {
-  TiCC::CL_Options opts("b:O:c:hV","version,help,cgn:,temp-dir");
+  TiCC::CL_Options opts("b:O:c:hV","version,help,cgn:,temp-dir,encoding:");
   try {
     opts.parse_args( argc, argv );
   }
@@ -275,7 +278,7 @@ int main(int argc, char * const argv[] ) {
       return EXIT_FAILURE;
     }
   }
-
+  opts.extract( 'e', encoding );
   vector<string> names = opts.getMassOpts();
   if ( names.size() == 0 ){
     cerr << "missing inputfile" << endl;
