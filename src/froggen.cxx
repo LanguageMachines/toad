@@ -54,7 +54,7 @@ int debug = 0;
 const int HISTORY = 20;
 bool lemma_file_only = false;
 string output_dir="";
-string temp_dir="/tmp/morgen";
+string temp_dir="/tmp/froggen";
 string encoding="UTF-8";
 static Configuration use_config;
 static Configuration default_config;
@@ -148,6 +148,7 @@ void fill_lemmas( istream& is,
 		  const UnicodeString& eos_mark ){
   size_t line_count = 0;
   size_t eos_count = 0;
+  int invalid_pos_count = 0;
   int count_2 = 0;
   UnicodeString line;
   while ( TiCC::getline( is, line, encoding ) ){
@@ -161,6 +162,7 @@ void fill_lemmas( istream& is,
     }
     vector<UnicodeString> parts = TiCC::split_at( line, "\t" );
     if ( parts.size() == 2 ){
+      // 2 word entry, fine. Count them
       if ( ++count_2 == 4 ){
 	if (line_count - eos_count == 4 ){
 	  // after the 4 lines with 2 entries have past, we assume it's a 2
@@ -168,28 +170,33 @@ void fill_lemmas( istream& is,
 	  return;
 	}
 	else {
-	  // so is seems mixes 2 and 3 columns. getting crazey...
+	  // so is seems mixes 2 and 3 columns. getting crazy...
 	  cerr << "wrong inputline on line " << line_count << " (confused)" << endl;
 	  exit( EXIT_FAILURE );
 	}
       }
-      continue;
+      continue; // try some more lines
     }
     else if ( parts.size() != 3 ){
       cerr << "wrong inputline on line " << line_count << " (should be 3 parts)" << endl;
       cerr << "'" << line << "'" << endl;
       exit( EXIT_FAILURE );
     }
+    // we have a 3-parts entry, which can be processed
     if ( !pos_tags.empty() ){
       if ( pos_tags.find( parts[2] ) == pos_tags.end() ){
 	cerr << "Warning, unknown POS tag: " << parts[2] << " in line "
 	     << line_count << " '" << line << "'" << endl;
-	//	exit( EXIT_FAILURE );
+	if ( ++invalid_pos_count > 10 ){
+	  cerr << "more than 10 invalid POS tags. Please fix your data"
+	       << endl;
+	  exit( EXIT_FAILURE );
+	}
       }
     }
-    UnicodeString uword = parts[0]; // the word
-    UnicodeString ulemma = parts[1]; // the lemma
-    UnicodeString utag = parts[2]; // the POS tag
+    UnicodeString uword = TiCC::utrim(parts[0]); // the word
+    UnicodeString ulemma = TiCC::utrim(parts[1]); // the lemma
+    UnicodeString utag = TiCC::utrim(parts[2]); // the POS tag
     auto it = lems.lower_bound( uword );
     if ( it == lems.upper_bound( uword ) ){
       // so a completely new word
@@ -306,6 +313,7 @@ map<string,set<string>> fill_particles( const string& line ){
 }
 
 set<UnicodeString> fill_postags( const string& pos_tags_file ){
+  cout << "reading valid POS tags from file: '" << pos_tags_file << "'" << endl;
   set<UnicodeString> result;
   if ( !pos_tags_file.empty() ){
     ifstream is( pos_tags_file );
@@ -328,12 +336,13 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 	cerr << "invalid line (" << count << ") in '" << pos_tags_file
 	     << "'" << endl;
 	cerr << "expected at least two words, with a POS tag as second" << endl;
-	cerr << "like: 'T105] N(soort,ev,dim,gen) vadertjes pijp'" << endl;
+	cerr << "like: '[T105] N(soort,ev,dim,gen) vadertjes pijp'" << endl;
 	cerr << "but found: '" << line << "'" << endl;
 	exit( EXIT_FAILURE );
       }
     }
   }
+  cout << "\tfound " << result.size() << " tags." << endl;
   return result;
 }
 
