@@ -1,13 +1,13 @@
 AM_CPPFLAGS = -I@top_srcdir@/include
 AM_CXXFLAGS = -DSYSCONF_PATH=\"$(datadir)\" -std=c++14 -g -O3 -W -Wall -pedantic
 
-bin_PROGRAMS = makemblem makembma checkmbma checkmblem testmbma froggen \
-	morgen chunkgen nergen
+bin_PROGRAMS = checkmbma checkmblem testmbma froggen \
+	morgen chunkgen nergen #makemblem makembma
 
-makemblem_SOURCES = makemblem.cxx
+#makemblem_SOURCES = makemblem.cxx
 checkmblem_SOURCES = checkmblem.cxx
 
-makembma_SOURCES = makembma.cxx
+#makembma_SOURCES = makembma.cxx
 checkmbma_SOURCES = checkmbma.cxx
 testmbma_SOURCES = testmbma.cxx
 
