@@ -313,9 +313,10 @@ map<string,set<string>> fill_particles( const string& line ){
 }
 
 set<UnicodeString> fill_postags( const string& pos_tags_file ){
-  cout << "reading valid POS tags from file: '" << pos_tags_file << "'" << endl;
   set<UnicodeString> result;
   if ( !pos_tags_file.empty() ){
+    cout << "reading valid POS tags from file: '" << pos_tags_file
+	 << "'" << endl;
     ifstream is( pos_tags_file );
     UnicodeString line;
     size_t count = 0;
@@ -341,8 +342,8 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 	exit( EXIT_FAILURE );
       }
     }
+    cout << "\tfound " << result.size() << " tags." << endl;
   }
-  cout << "\tfound " << result.size() << " tags." << endl;
   return result;
 }
 
