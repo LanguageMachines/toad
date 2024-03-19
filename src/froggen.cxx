@@ -296,12 +296,13 @@ void create_tagger( const Configuration& config,
   cout << "finished creating tagger" << endl;
 }
 
-map<string,set<string>> fill_particles( const string& line ){
-  map<string,set<string>> result;
+map<UnicodeString,set<UnicodeString>> fill_particles( const string& line ){
+  map<UnicodeString,set<UnicodeString>> result;
   cout << "start filling particle info from " << line << endl;
-  vector<string> parts = TiCC::split_at_first_of( line, "[] " );
+  UnicodeString uline = TiCC::UnicodeFromUTF8(line);
+  vector<UnicodeString> parts = TiCC::split_at_first_of( uline, "[] " );
   for ( const auto& part : parts ){
-    vector<string> v = TiCC::split_at( part, "/" );
+    vector<UnicodeString> v = TiCC::split_at( part, "/" );
     if ( v.size() != 2 ){
       cerr << "error parsing particles line: " << line << endl;
       cerr << "at : " << part << endl;
@@ -348,7 +349,7 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
 }
 
 void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, map<UnicodeString, size_t>>>& data,
-			     const map<string,set<string>>& particles,
+			     const map<UnicodeString,set<UnicodeString>>& particles,
 			     const string& _filename ){
   string filename = temp_dir + _filename;
   ofstream os( filename );
@@ -428,14 +429,13 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 	  if ( !prefixed.isEmpty() )
 	    break;
 	  thisform = wordform;
-	  if ( tag.indexOf(it.first.c_str()) >= 0 ){
+	  if ( tag.indexOf(it.first) >= 0 ){
 	    // the POS tag matches, so potentially yes
 	    UnicodeString part;
-	    for ( const auto& p : it.second ){
+	    for ( const auto& part : it.second ){
 	      // loop over potential particles.
-	      int part_pos = thisform.indexOf(p.c_str());
+	      int part_pos = thisform.indexOf(part);
 	      if ( part_pos != -1 ){
-		part = p.c_str();
 		if ( debug ){
 		  cerr << "alert - " << thisform << " " << lemma << endl;
 		  cerr << "matched " << part << " position: " << part_pos << endl;
@@ -539,7 +539,7 @@ void train_mblem( const Configuration& config,
 
 void create_lemmatizer( const Configuration& config,
 			const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data,
-			const map<string,set<string>>& particles,
+			const map<UnicodeString,set<UnicodeString>>& particles,
 			const string& mblem_tree_file ){
   if ( data.empty() ){
     cout << "skip creating a lemmatizer, no lemma data available." << endl;
@@ -763,7 +763,7 @@ int main( int argc, char * const argv[] ) {
   }
   opts.extract( 'e', encoding );
   string mblem_particles = use_config.lookUp( "particles", "mblem" );
-  map<string,set<string>> particles;
+  map<UnicodeString,set<UnicodeString>> particles;
   if ( !mblem_particles.empty() ){
     particles = fill_particles( mblem_particles );
   }
