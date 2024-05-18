@@ -431,7 +431,6 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 	  thisform = wordform;
 	  if ( tag.indexOf(it.first) >= 0 ){
 	    // the POS tag matches, so potentially yes
-	    UnicodeString part;
 	    for ( const auto& part : it.second ){
 	      // loop over potential particles.
 	      int part_pos = thisform.indexOf(part);
