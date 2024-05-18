@@ -426,8 +426,9 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
 	UnicodeString thisform = wordform;
 	//  find out whether there may be a prefix or infix particle
 	for( const auto& it : particles ){
-	  if ( !prefixed.isEmpty() )
+	  if ( !prefixed.isEmpty() ){
 	    break;
+	  }
 	  thisform = wordform;
 	  if ( tag.indexOf(it.first) >= 0 ){
 	    // the POS tag matches, so potentially yes
