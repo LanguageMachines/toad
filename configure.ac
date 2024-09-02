@@ -8,8 +8,11 @@ AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
+AX_REQUIRE_DEFINED([AX_CXX_COMPILE_STDCXX_17])
+
 # Checks for programs.
 AC_PROG_CXX( [g++] )
+AX_CXX_COMPILE_STDCXX_17
 
 # use libtool
 LT_INIT
