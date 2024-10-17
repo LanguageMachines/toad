@@ -219,12 +219,9 @@ void fill_lemmas( istream& is,
 
 void write_lemmas( ostream& os,
 		   const multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems ){
-  for ( const auto& it1 : lems ){
-    UnicodeString word = it1.first;
-    for ( const auto& it2 : it1.second ){
-      UnicodeString lemma = it2.first;
-      for( const auto& it3 : it2.second ){
-	UnicodeString pos = it3.first;
+  for ( const auto& [word, mmaps] : lems ){
+    for ( const auto& [lemma,posmap] : mmaps ){
+      for( const auto& [dummy,pos] : posmap ){
 	os << word << "\t" << lemma << "\t" << pos << endl;
       }
     }
@@ -400,11 +397,11 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
       outLine = instance;
     }
     multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> sorted;
-    for ( const auto& it2 : data_it.second ){
-      for ( const auto& it3: it2.second ){
+    for ( const auto& [word2, mmap] : data_it.second ){
+      for ( const auto& [word1,map_map] : mmap ){
 	multimap<UnicodeString,UnicodeString> mm;
-	mm.insert(make_pair(it3.first,it2.first));
-	sorted.insert(make_pair(it3.second,mm));
+	mm.insert(make_pair(word1,word2));
+	sorted.insert(make_pair(map_map,mm));
       }
     }
     if ( debug ){
