@@ -141,10 +141,15 @@ void usage( const string& name ){
   cerr << "-v or --version Give version info." << endl;
 }
 
-void fill_lemmas( istream& is,
-		  multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems,
-		  const set<UnicodeString>& pos_tags,
+using mblem_data = multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>;
+  // WTF is this?
+  // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
+  // this structure is probably overly complex. redesign is needed.
+  // e.g. on output we have te re-sort it to make it usable.
 
+void fill_lemmas( istream& is,
+		  mblem_data& lems,
+		  const set<UnicodeString>& pos_tags,
 		  const UnicodeString& eos_mark ){
   size_t line_count = 0;
   size_t eos_count = 0;
@@ -218,7 +223,7 @@ void fill_lemmas( istream& is,
 }
 
 void write_lemmas( ostream& os,
-		   const multimap<UnicodeString, map<UnicodeString, map<UnicodeString,size_t>>>& lems ){
+		   const mblem_data& lems ){
   for ( const auto& [word, mmaps] : lems ){
     for ( const auto& [lemma,posmap] : mmaps ){
       for( const auto& [dummy,pos] : posmap ){
@@ -345,7 +350,7 @@ set<UnicodeString> fill_postags( const string& pos_tags_file ){
   return result;
 }
 
-void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, map<UnicodeString, size_t>>>& data,
+void create_mblem_trainfile( const mblem_data& data,
 			     const map<UnicodeString,set<UnicodeString>>& particles,
 			     const string& _filename ){
   string filename = temp_dir + _filename;
@@ -396,24 +401,24 @@ void create_mblem_trainfile( const multimap<UnicodeString, map<UnicodeString, ma
       safeInstance = instance;
       outLine = instance;
     }
-    multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> sorted;
-    for ( const auto& [word2, mmap] : data_it.second ){
-      for ( const auto& [word1,map_map] : mmap ){
+    multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> rev_sorted;
+  // data is a multimap of Words to a map of lemmas to a frequency list of POS tags.
+  // rev_sorted is a multimap of counts to a multimap of tag/lemmas names.
+    for ( const auto& [lemma, tag_map] : data_it.second ){
+      for ( const auto& [tag,count] : tag_map ){
 	multimap<UnicodeString,UnicodeString> mm;
-	mm.insert(make_pair(word1,word2));
-	sorted.insert(make_pair(map_map,mm));
+	mm.insert(make_pair(tag,lemma));
+	rev_sorted.insert(make_pair(count,mm));
       }
     }
     if ( debug ){
       cerr << "sorted: " << endl;
-      for ( const auto& it : sorted ){
-	cerr << it.second << " (" << it.first << " )" << endl;
+      for ( const auto& [count,mmap] : rev_sorted ){
+	cerr << mmap << " (" << count << " )" << endl;
       }
     }
-    for ( const auto& it2 : sorted ){
-      for( const auto& it3 : it2.second ){
-	UnicodeString tag = it3.first;
-	UnicodeString lemma  = it3.second;
+    for ( const auto& it2 : rev_sorted ){
+      for( const auto& [tag,lemma] : it2.second ){
 	if ( debug ){
 	  cerr << "LEMMA = " << lemma << endl;
 	  cerr << "tag = " << tag << endl;
@@ -535,7 +540,7 @@ void train_mblem( const Configuration& config,
 }
 
 void create_lemmatizer( const Configuration& config,
-			const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data,
+			const mblem_data& data,
 			const map<UnicodeString,set<UnicodeString>>& particles,
 			const string& mblem_tree_file ){
   if ( data.empty() ){
@@ -551,7 +556,7 @@ void create_lemmatizer( const Configuration& config,
 }
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
-		 const multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>>& data ){
+		 const mblem_data& data ){
   for ( const auto& word : data ){
     tokenizer->tokenizeLine( word.first );
     vector<Tokenizer::Token> v = tokenizer->popSentence();
@@ -619,6 +624,18 @@ void add_cgn_files( const string& output_dir,
     exit( EXIT_FAILURE );
   }
 
+}
+
+void print_data( const mblem_data& data ){
+  for ( const auto& [word,lemma_map] : data ){
+    cerr << word;
+    for( const auto& [lemma,pos_map] : lemma_map ){
+      cerr << "\t" << lemma << endl;
+      for( const auto& [tag,count] : pos_map ){
+	cerr << "\t\t\t" << tag  << " " << count << endl;
+      }
+    }
+  }
 }
 
 int main( int argc, char * const argv[] ) {
@@ -782,11 +799,7 @@ int main( int argc, char * const argv[] ) {
     return EXIT_FAILURE;
   }
   set<UnicodeString> pos_tags = fill_postags( pos_tags_file );
-  multimap<UnicodeString,map<UnicodeString,map<UnicodeString,size_t>>> data;
-  // WTF is this?
-  // a mutimap of Words to a map of lemmas to a frequency list of POS tags.
-  // this structure is probably overly complex. redesign is needed.
-  // e.g. on output we have te re-sort it to make it usable.
+  mblem_data data;
   if ( !lemma_file_only ){
     cout << "start reading lemmas from the corpus: " << corpusname << endl;
     cout << "EOS marker = '" << eos_mark << "'" << endl;
@@ -794,15 +807,7 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( corpus, data, pos_tags, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
-      for ( const auto& it1 : data ){
-	cerr << it1.first;
-	for( const auto& it2 : it1.second ){
-	  cerr << "\t" << it2.first << endl;
-	  for( const auto& it3 : it2.second ){
-	    cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
-	  }
-	}
-      }
+      print_data( data );
     }
     if ( data.size() == 0 ){
       cout << "no lemma information found. carry on " << endl;
@@ -817,29 +822,13 @@ int main( int argc, char * const argv[] ) {
     fill_lemmas( is, data, pos_tags, eos_mark );
     if ( debug ){
       cerr << "current data" << endl;
-      for ( const auto& it1 : data ){
-	cerr << it1.first;
-	for( const auto& it2 : it1.second ){
-	  cerr << "\t" << it2.first << endl;
-	  for( const auto& it3 : it2.second ){
-	    cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
-	  }
-	}
-      }
+      print_data( data );
     }
     cout << "done, total size=" << data.size() << endl;
   }
   if ( debug ){
     cerr << "current data" << endl;
-    for ( const auto& it1 : data ){
-      cerr << it1.first;
-      for( const auto& it2 : it1.second ){
-	cerr << "\t" << it2.first << endl;
-	for( const auto& it3 : it2.second ){
-	  cerr << "\t\t\t" << it3.first << " " << it3.second << endl;
-	}
-      }
-    }
+    print_data( data );
   }
   if ( !lemma_outname.empty() ){
     ofstream os( lemma_outname );
