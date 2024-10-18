@@ -360,12 +360,12 @@ void create_mblem_trainfile( const mblem_data& data,
     exit( EXIT_FAILURE );
   }
   UnicodeString outLine;
-  for ( const auto& data_it : data ){
-    UnicodeString wordform = data_it.first;
+  // data is a multimap of Words to a map of lemmas to a frequency list of POS tags.
+  for ( const auto& [wordform,lemma_map] : data ){
     UnicodeString safeInstance;
     if ( !outLine.isEmpty() ){
       string out = UnicodeToUTF8(outLine);
-      out.erase( out.length()-1 ); // remove the final '|'
+      out.pop_back(); // remove the final '|'
       os << out << endl;
       outLine.remove();
     }
@@ -373,11 +373,11 @@ void create_mblem_trainfile( const mblem_data& data,
     // format instance
     for ( int i=0; i<HISTORY; i++) {
       int j= wordform.length()-HISTORY+i;
-      if (j<0)
+      if ( j<0 ) {
 	instance += "= ";
+      }
       else {
-	UChar uc = wordform[j];
-	instance += uc;
+	instance += wordform[j];
 	instance += " ";
       }
     }
@@ -396,15 +396,15 @@ void create_mblem_trainfile( const mblem_data& data,
 	     << "to " << instance << endl;
       }
       string out = UnicodeToUTF8(outLine);
-      out.erase( out.length()-1 );
+      out.pop_back();
       os << out << endl;
       safeInstance = instance;
       outLine = instance;
     }
     multimap<size_t, multimap<UnicodeString,UnicodeString>,std::greater<size_t>> rev_sorted;
-  // data is a multimap of Words to a map of lemmas to a frequency list of POS tags.
-  // rev_sorted is a multimap of counts to a multimap of tag/lemmas names.
-    for ( const auto& [lemma, tag_map] : data_it.second ){
+    // rev_sorted is a multimap of counts to a multimap of tag/lemmas names.
+    // highest counts first
+    for ( const auto& [lemma, tag_map] : lemma_map ){
       for ( const auto& [tag,count] : tag_map ){
 	multimap<UnicodeString,UnicodeString> mm;
 	mm.insert(make_pair(tag,lemma));
@@ -417,8 +417,8 @@ void create_mblem_trainfile( const mblem_data& data,
 	cerr << mmap << " (" << count << " )" << endl;
       }
     }
-    for ( const auto& it2 : rev_sorted ){
-      for( const auto& [tag,lemma] : it2.second ){
+    for ( const auto& [dummy,tag_lemma_map] : rev_sorted ){
+      for( const auto& [tag,lemma] : tag_lemma_map ){
 	if ( debug ){
 	  cerr << "LEMMA = " << lemma << endl;
 	  cerr << "tag = " << tag << endl;
@@ -427,14 +427,14 @@ void create_mblem_trainfile( const mblem_data& data,
 	UnicodeString prefixed;
 	UnicodeString thisform = wordform;
 	//  find out whether there may be a prefix or infix particle
-	for( const auto& it : particles ){
+	for( const auto& [seek_tag,parts] : particles ){
 	  if ( !prefixed.isEmpty() ){
 	    break;
 	  }
 	  thisform = wordform;
-	  if ( tag.indexOf(it.first) >= 0 ){
+	  if ( tag.indexOf(seek_tag) >= 0 ){
 	    // the POS tag matches, so potentially yes
-	    for ( const auto& part : it.second ){
+	    for ( const auto& part : parts ){
 	      // loop over potential particles.
 	      int part_pos = thisform.indexOf(part);
 	      if ( part_pos != -1 ){
@@ -463,11 +463,12 @@ void create_mblem_trainfile( const mblem_data& data,
 			  ( edit[ident]==lemma[ident] ) ){
 		    ident++;
 		  }
-		  if (ident<5) {
+		  if ( ident<5 ) {
 		    // so we want at least 5 characters in common between lemma and our
 		    // edit. Otherwise discard.
-		    if ( debug )
+		    if ( debug ){
 		      cerr << " must be a fake!" << endl;
+		    }
 		    prefixed = "";
 		  }
 		  else {
@@ -489,8 +490,9 @@ void create_mblem_trainfile( const mblem_data& data,
 	int ident=0;
 	while ( ident < thisform.length() &&
 		ident < lemma.length() &&
-		thisform[ident]==lemma[ident] )
+		thisform[ident]==lemma[ident] ){
 	  ident++;
+	}
 	if ( ident < thisform.length() ) {
 	  for ( int i=ident; i< thisform.length(); i++) {
 	    deleted += thisform[i];
@@ -507,19 +509,22 @@ void create_mblem_trainfile( const mblem_data& data,
 	       << ", insert " << inserted
 	       << ", delete " << deleted << endl;
 	}
-	if ( !prefixed.isEmpty() )
+	if ( !prefixed.isEmpty() ){
 	  outLine += "+P" + prefixed;
-	if ( !deleted.isEmpty() )
+	}
+	if ( !deleted.isEmpty() ){
 	  outLine += "+D" + deleted;
-	if ( !inserted.isEmpty() )
+	}
+	if ( !inserted.isEmpty() ){
 	  outLine += "+I" + inserted;
+	}
 	outLine += "|";
       }
     }
   }
   if ( !outLine.isEmpty() ){
     string out = UnicodeToUTF8(outLine);
-    out.erase( out.length()-1 );
+    out.pop_back();
     os << out << endl;
     outLine.remove();
   }
@@ -557,11 +562,11 @@ void create_lemmatizer( const Configuration& config,
 
 void check_data( Tokenizer::TokenizerClass *tokenizer,
 		 const mblem_data& data ){
-  for ( const auto& word : data ){
-    tokenizer->tokenizeLine( word.first );
+  for ( const auto& [word,dummy] : data ){
+    tokenizer->tokenizeLine( word );
     vector<Tokenizer::Token> v = tokenizer->popSentence();
     if ( v.size() != 1 ){
-      cerr << "the provided tokenizer doesn't handle '" << word.first
+      cerr << "the provided tokenizer doesn't handle '" << word
 	   << "' well (splits it into " << v.size() << " parts.)" << endl;
       cerr << "[";
       for ( const auto& w : v ){
