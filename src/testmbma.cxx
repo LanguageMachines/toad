@@ -49,7 +49,7 @@ using namespace Timbl;
 using namespace TiCC;
 
 int debug = 0;
-LogStream my_default_log( cerr, "", StampMessage ); // fall-back
+LogStream my_default_log( cerr, StampMessage ); // fall-back
 LogStream *theErrLog = &my_default_log;  // fill the externals
 
 vector<string> fileNames;
