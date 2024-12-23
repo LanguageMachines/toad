@@ -121,7 +121,7 @@ void copy_cgn_files( const string& output_dir, const string& cgn_path ){
 }
 
 void spitOut( ostream& os, const UnicodeString& word,
-	      vector<set<UnicodeString> >& morphemes ){
+	      const vector<set<UnicodeString> >& morphemes ){
   for ( int i=0; i < word.length(); ++i ){
     UnicodeString out;
     // left context
@@ -199,8 +199,8 @@ void create_instance_file( const string& inpname, const string& outname ){
 	spitOut( os, prevword, morphemes );
       }
       prevword = word;
-      for ( size_t i=0; i < morphemes.size(); ++i ){
-	morphemes[i].clear();
+      for ( auto& it : morphemes ){
+	it.clear();
       }
     }
     for ( size_t i=0; i < parts.size(); ++i ){
