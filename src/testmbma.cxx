@@ -181,8 +181,7 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     bool deep = !configuration.getatt( "deep-morph", "mbma" ).empty();
-    for ( size_t i=0; i < fileNames.size(); ++i ){
-      string TestFileName = fileNames[i];
+    for ( const auto& TestFileName : fileNames ){
       ifstream in(TestFileName);
       if ( in.good() ){
 	cerr << "Processing: " << TestFileName << endl;
